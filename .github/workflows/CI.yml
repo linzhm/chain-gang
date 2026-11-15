@@ -120,7 +120,14 @@ jobs:
         platform:
           - runner: macos-latest
             target: x86_64
-          - runner: macos-14
+          # macos-14 is retired: GitHub refuses the job ("The configuration
+          # 'macos-14-arm64-us-default' is not supported") and, since the
+          # release job needs every wheel, nothing reaches PyPI (CS-743).
+          # macos-26 is the image macos-latest resolves to, where the x86_64
+          # wheel above already builds. The runner's OS does not set the
+          # wheel's tag -- that wheel is macosx_10_12 on macOS 26, as it was
+          # before -- so the arm64 wheel stays macosx_11_0.
+          - runner: macos-26
             target: aarch64
     steps:
       - uses: actions/checkout@v7
