@@ -8,7 +8,7 @@ use crate::script::Checker;
 use crate::util::{hash160, lshift, rshift, sha1::sha1, sha256::sha256, sha256d, ChainGangError};
 
 use num_bigint::BigInt;
-use num_traits::{One, ToPrimitive, Zero};
+use num_traits::{One, Signed, ToPrimitive, Zero};
 use ripemd::{Digest, Ripemd160};
 
 use super::multisig::check_multisig;
@@ -159,17 +159,19 @@ pub fn core_eval<T: Checker>(
             }
             OP_NOP => {}
             OP_VER => {
-                stack.push(encode_num(checker.tx_version()? as i64)?);
+                stack.push(checker.tx_version()?.to_le_bytes().to_vec());
             }
             OP_IF => conditions.push(pop_bool_for_if(&mut stack)?),
             OP_NOTIF => conditions.push(!pop_bool_for_if(&mut stack)?),
             OP_VERIF => {
-                let comparison = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
-                conditions.push(verif_branch_exec(checker, comparison, false)?);
+                check_stack_size(1, &stack)?;
+                let comparison = stack.pop().unwrap();
+                conditions.push(verif_branch_exec(checker, &comparison, false)?);
             }
             OP_VERNOTIF => {
-                let comparison = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
-                conditions.push(verif_branch_exec(checker, comparison, true)?);
+                check_stack_size(1, &stack)?;
+                let comparison = stack.pop().unwrap();
+                conditions.push(verif_branch_exec(checker, &comparison, true)?);
             }
             OP_ELSE => conditions.toggle(pregenesis)?,
             OP_ENDIF => conditions.pop()?,
@@ -347,8 +349,18 @@ pub fn core_eval<T: Checker>(
             }
             OP_SUBSTR => {
                 check_stack_size(3, &stack)?;
-                let length = pop_num_for_eval(&mut stack, policy)?;
-                let start = pop_num_for_eval(&mut stack, policy)?;
+                let length = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                let length = length.to_i32().unwrap_or(if length.is_negative() {
+                    i32::MIN
+                } else {
+                    i32::MAX
+                });
+                let start = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                let start = start.to_i32().unwrap_or(if start.is_negative() {
+                    i32::MIN
+                } else {
+                    i32::MAX
+                });
                 let s = stack.pop().unwrap();
                 if s.is_empty() {
                     return Err(substr_error("OP_SUBSTR failed, zero-length source"));
@@ -358,14 +370,19 @@ pub fn core_eval<T: Checker>(
                 }
                 let start = start as usize;
                 let length = length as usize;
-                if start + length > s.len() {
+                if start >= s.len() || length > s.len() - start {
                     return Err(substr_error("OP_SUBSTR failed, length out of range"));
                 }
                 stack.push(s[start..start + length].to_vec());
             }
             OP_LEFT => {
                 check_stack_size(2, &stack)?;
-                let length = pop_num_for_eval(&mut stack, policy)?;
+                let length = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                let length = length.to_i32().unwrap_or(if length.is_negative() {
+                    i32::MIN
+                } else {
+                    i32::MAX
+                });
                 let s = stack.pop().unwrap();
                 if length < 0 {
                     return Err(substr_error("OP_LEFT failed, negative length"));
@@ -378,7 +395,12 @@ pub fn core_eval<T: Checker>(
             }
             OP_RIGHT => {
                 check_stack_size(2, &stack)?;
-                let length = pop_num_for_eval(&mut stack, policy)?;
+                let length = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                let length = length.to_i32().unwrap_or(if length.is_negative() {
+                    i32::MIN
+                } else {
+                    i32::MAX
+                });
                 let s = stack.pop().unwrap();
                 if length < 0 {
                     return Err(substr_error("OP_RIGHT failed, negative length"));
@@ -851,25 +873,56 @@ pub fn core_eval<T: Checker>(
                 }
             }
             OP_NOP1 => {}
-            OP_LSHIFTNUM => {
-                check_stack_size(2, &stack)?;
-                let n = pop_num_for_eval(&mut stack, policy)?;
-                if n < 0 {
-                    let msg = "n must be non-negative".to_string();
-                    return Err(ChainGangError::ScriptError(msg));
+            OP_LSHIFTNUM | OP_RSHIFTNUM => {
+                let n = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                let value = pop_bigint_for_eval(&mut stack, max_num_len, policy)?;
+                if n.is_negative() {
+                    return Err(ChainGangError::ScriptError(
+                        "negative numeric shift".to_string(),
+                    ));
                 }
-                let v = stack.pop().unwrap();
-                stack.push(lshift(&v, n as usize));
-            }
-            OP_RSHIFTNUM => {
-                check_stack_size(2, &stack)?;
-                let n = pop_num_for_eval(&mut stack, policy)?;
-                if n < 0 {
-                    let msg = "n must be non-negative".to_string();
-                    return Err(ChainGangError::ScriptError(msg));
+                // Match the node's OpenSSL shift width and conservative byte-size
+                // check, including zero operands; a mathematical zero shortcut
+                // would incorrectly accept shifts that the node rejects.
+                if n > BigInt::from(i32::MAX) {
+                    return Err(ChainGangError::ScriptError(
+                        "numeric shift exceeds node shift range".to_string(),
+                    ));
                 }
-                let v = stack.pop().unwrap();
-                stack.push(rshift(&v, n as usize));
+                if opcode == OP_LSHIFTNUM
+                    && BigInt::from(encode_bigint(value.clone()).len()) + (&n / 8)
+                        > BigInt::from(max_result_len)
+                {
+                    return Err(ChainGangError::ScriptError(
+                        "numeric shift exceeds script number limit".to_string(),
+                    ));
+                }
+                // Shift the magnitude, preserving sign (right shift truncates toward zero).
+                // Check output size before allocating, including the sign bit.
+                let bits = value.bits();
+                let result = if value.is_zero() {
+                    BigInt::zero()
+                } else if opcode == OP_RSHIFTNUM {
+                    if n >= BigInt::from(bits) {
+                        BigInt::zero()
+                    } else {
+                        let magnitude = value.abs() >> n.to_usize().unwrap();
+                        if value.is_negative() {
+                            -magnitude
+                        } else {
+                            magnitude
+                        }
+                    }
+                } else {
+                    let max_bits = max_result_len.saturating_mul(8).saturating_sub(1);
+                    if n > BigInt::from(max_bits.saturating_sub(bits as usize)) {
+                        return Err(ChainGangError::ScriptError(
+                            "numeric shift exceeds script number limit".to_string(),
+                        ));
+                    }
+                    value << n.to_usize().unwrap()
+                };
+                push_bigint_checked(&mut stack, result, max_result_len)?;
             }
             OP_NOP9 => {}
             OP_NOP10 => {}

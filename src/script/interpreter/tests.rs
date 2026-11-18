@@ -927,32 +927,11 @@ fn op_return_fails_before_genesis_only_if_executed() {
 }
 
 #[test]
-fn chronicle_op_ver_pushes_tx_version() {
-    pass_with_version(&[OP_VER, OP_2, OP_NUMEQUAL], 2);
-}
-
-#[test]
-fn chronicle_op_verif_executes_when_version_is_high_enough() {
-    pass_with_version(&[OP_2, OP_VERIF, OP_1, OP_ELSE, OP_0, OP_ENDIF], 2);
-    let mut c = MockChecker::with_tx_version(1);
-    assert!(eval(
-        &[OP_2, OP_VERIF, OP_1, OP_ELSE, OP_0, OP_ENDIF],
-        &mut c,
-        NO_FLAGS
-    )
-    .is_err());
-}
-
-#[test]
-fn chronicle_op_vernotif_executes_when_version_is_too_low() {
-    pass_with_version(&[OP_2, OP_VERNOTIF, OP_1, OP_ELSE, OP_0, OP_ENDIF], 1);
-    let mut c = MockChecker::with_tx_version(2);
-    assert!(eval(
-        &[OP_2, OP_VERNOTIF, OP_1, OP_ELSE, OP_0, OP_ENDIF],
-        &mut c,
-        NO_FLAGS
-    )
-    .is_err());
+fn chronicle_version_opcodes_compare_raw_four_bytes() {
+    pass_with_version(&[OP_VER, 4, 2, 0, 0, 0, OP_EQUAL], 2);
+    pass_with_version(&[4, 2, 0, 0, 0, OP_VERIF, OP_1, OP_ELSE, OP_0, OP_ENDIF], 2);
+    pass_with_version(&[4, 1, 0, 0, 0, OP_VERIF, OP_0, OP_ELSE, OP_1, OP_ENDIF], 2);
+    pass_with_version(&[OP_2, OP_VERNOTIF, OP_1, OP_ELSE, OP_0, OP_ENDIF], 2);
 }
 
 #[test]
