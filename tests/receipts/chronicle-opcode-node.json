@@ -1,0 +1,373 @@
+{
+  "node_version": "Bitcoin SV version v1.2.3",
+  "image": "docker.io/bitcoinsv/bitcoin-sv@sha256:d96fe4786a00e5fc10bc9e0e76a6006376f9472d4eb74d07e4c1e0d019493d33",
+  "runtime": "Apple Container",
+  "cases": [
+    {
+      "expected": true,
+      "library": true,
+      "name": "version-raw",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "62040200000087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "verif-equal",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "04020000006551670068",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "verif-less-is-not-equal",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "04010000006500675168",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "verif-short-is-not-equal",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "526651670068",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "left-shift-negative",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "4f51b6018287",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "right-shift-negative",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "018351b74f87",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "left-shift-grow",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "5158b602000187",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "right-shift-huge",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "51050000000001b70087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Big integer OpenSSL error",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "left-shift-huge-zero",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "00050000000001b60087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Script number overflow",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "left-shift-huge-nonzero",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "51050000000001b6",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Script number overflow",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "negative-shift",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "514fb7",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Given operand is not a number within the valid range [-2^31...2^31]",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "substr-end-zero",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "012a5100b37551",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Given operand is not a number within the valid range [-2^31...2^31]",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "substr-valid-zero",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "012a0000b30087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "substr-empty",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "000000b3",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "error",
+        "description": "Given operand is not a number within the valid range [-2^31...2^31]",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "left-empty",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "0000b40087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "right-empty",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "0000b50087",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "left-padded-number",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "012a050100000000b4012a87",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "right-padded-number",
+      "request": {
+        "flags": 3932160,
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "012a050100000000b5012a87",
+          "value": 1
+        }
+      },
+      "node": {
+        "result": "ok",
+        "flags": 3932160
+      },
+      "matches": true
+    }
+  ]
+}
