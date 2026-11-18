@@ -1,4 +1,4 @@
-use super::multisig::{prefork, remove_sig};
+use super::multisig::{needs_signature_cleanup, remove_sig};
 
 /// Phase of a two-phase unlock/lock script evaluation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,7 +28,7 @@ pub(crate) fn checksig_script_code(
         }
         Some(_) => script[check_index..].to_vec(),
     };
-    if prefork(sig) {
+    if needs_signature_cleanup(sig) {
         cleaned_script = remove_sig(sig, &cleaned_script);
     }
     cleaned_script
