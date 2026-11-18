@@ -44,3 +44,5 @@ BSV_CONTAINER=cg-chronicle-context-v3 python3 scripts/chronicle-node-diff.py /tm
 Mining here establishes real activation context; synthetic test spends are still checked through `verifyscript` with supplied outputs. We did not mine these spending transactions or establish mempool admission. Genesis metadata/configuration remains an explicit existing responsibility. The old context-free API necessarily assumes output eras; callers needing fidelity must use complete metadata.
 
 The vendored vector adapter's known-difference list shrinks for restored opcode activation; old NOP policy cases are now classified under its already-existing lack of DISCOURAGE_UPGRADABLE_NOPS flag modeling. This is not a whitelist for live-node mismatches. Other Chronicle and historical differences remain documented separately.
+
+The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived tests intentionally omit flags instead.

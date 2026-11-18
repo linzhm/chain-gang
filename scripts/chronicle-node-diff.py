@@ -27,7 +27,9 @@ for start in range(0, len(cases), 32):
     if len(replies) != len(batch):
         raise RuntimeError('Node returned an incomplete batch')
     for row, reply in zip(batch, replies):
-        matches = (reply['result'] in ('ok', 'error') and
+        flags_match = ('flags' not in row['request'] or
+                       reply.get('flags') == row['request']['flags'])
+        matches = (flags_match and reply['result'] in ('ok', 'error') and
                    (reply['result'] == 'ok') == row['library'] == row['expected'])
         results.append({**row, 'node': reply, 'matches': matches})
         if not matches:
