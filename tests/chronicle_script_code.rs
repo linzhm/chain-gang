@@ -123,10 +123,9 @@ fn node_signature_cases() {
                 lock_script: lock.clone(),
             },
         );
-        let verdict = tx
-            .validate_consensus(true, true, &utxos, &HashSet::new())
-            ;
-        let library=verdict.is_ok(); eprintln!("{name}: {verdict:?}");
+        let verdict = tx.validate_consensus(true, true, &utxos, &HashSet::new());
+        let library = verdict.is_ok();
+        eprintln!("{name}: {verdict:?}");
         rows.push(json!({"name":name,"expected":true,"library":library,"request":{"tx":tx.as_hexstr(),"n":0,"flags":(1u32<<18)|(1<<19)|(1<<20)|(1<<21)|(1<<16)|2|4|8|(1<<14),"reportflags":true,"txo":{"lock":hex::encode(&lock.0),"value":1}}}));
         assert!(library, "{name}");
     }
