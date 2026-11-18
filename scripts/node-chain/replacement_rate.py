@@ -12,6 +12,7 @@ t=tx_for([p],sequences=[4],locktime=future)
 r=admission('rate-third-update-rejected',t,[p],'rejected');assert 'non-final-txn-replacement-rate' in r['rpc_error'];assert previous in pools()['nonfinal']
 # A policy update throttle cannot make a final transaction consensus-invalid.
 final=tx_for([p],sequences=[0xffffffff],locktime=future)
+r=admission('rate-finalization-still-throttled',final,[p],'rejected');assert 'non-final-txn-replacement-rate' in r['rpc_error'];assert previous in pools()['nonfinal']
 block_check('rate-throttle-does-not-invalidate-final-block',[final],True)
 remaining=pools()
 assert remaining['regular']==[] and remaining['nonfinal']==[previous]
