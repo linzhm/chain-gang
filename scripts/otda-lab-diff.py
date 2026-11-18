@@ -12,9 +12,10 @@ records=[]
 def check(tx,parents,ix,valid=True):
     out=parents[ix].tx_outs[0]
     flags=sum(1<<b for b in (1,2,3,16,18,19,20,21))
-    request=dict(tx=tx.serialize().hex(),n=ix,flags=flags,reportflags=True,txo=dict(lock=out.script_pubkey.raw_serialize().hex(),value=out.amount,height=3))
+    request=dict(tx=tx.serialize().hex(),n=ix,flags=flags,reportflags=True,txo=dict(lock=out.script_pubkey.raw_serialize().hex(),value=out.amount))
     cli=['container','exec','-i',os.environ.get('BSV_CONTAINER','cg-chronicle-context-v3'),'bitcoin-cli','-regtest','-rpcuser=cgtest','-rpcpassword=local-regtest-only','-stdin','verifyscript']
     answer=json.loads(subprocess.check_output(cli,input=json.dumps([request])+'\nfalse\n10000\n',text=True))[0]
+    assert answer.get('flags') == flags, ('unexpected effective flags',answer)
     try:
         tx.validate(parents)
         rust=True; error=None

@@ -56,3 +56,5 @@ For the historical comparison, install #240 into a **different** virtual environ
 ## Limits
 
 This validates real signatures and application scripts against `verifyscript` with supplied UTXOs and explicit flags. It does **not** demonstrate block acceptance, mempool admission, activation-height selection, all script flags, or all Chronicle semantics. Context/activation and number-limit defects (#241/#246) and restored opcodes (#242–#244) remain separate changes. A finite matrix is not a proof of full consensus equivalence.
+
+The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived tests intentionally omit flags instead.
