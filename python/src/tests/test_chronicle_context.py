@@ -39,19 +39,25 @@ class ChronicleContextTest(unittest.TestCase):
     """
 
     def test_op_ver_with_tx_version(self):
-        script = Script.parse_string("OP_VER OP_2 OP_NUMEQUAL")
+        script = Script.parse_string("OP_VER 0x02000000 OP_EQUAL")
         self.assertTrue(Context(script=script, tx_version=2).evaluate())
         self.assertFalse(Context(script=script, tx_version=1).evaluate())
 
-    def test_op_verif_executes_when_version_is_high_enough(self):
-        script = Script.parse_string("OP_2 OP_VERIF OP_1 OP_ELSE OP_0 OP_ENDIF")
+    def test_op_verif_compares_exact_version_bytes(self):
+        script = Script.parse_string("0x02000000 OP_VERIF OP_1 OP_ELSE OP_0 OP_ENDIF")
         self.assertTrue(Context(script=script, tx_version=2).evaluate())
         self.assertFalse(Context(script=script, tx_version=1).evaluate())
 
-    def test_op_vernotif_executes_when_version_is_too_low(self):
-        script = Script.parse_string("OP_2 OP_VERNOTIF OP_1 OP_ELSE OP_0 OP_ENDIF")
+    def test_op_vernotif_compares_exact_version_bytes(self):
+        script = Script.parse_string("0x02000000 OP_VERNOTIF OP_1 OP_ELSE OP_0 OP_ENDIF")
         self.assertTrue(Context(script=script, tx_version=1).evaluate())
         self.assertFalse(Context(script=script, tx_version=2).evaluate())
+
+    def test_version_comparison_rejects_numeric_short_form(self):
+        script = Script.parse_string("OP_2 OP_VERIF OP_1 OP_ELSE OP_0 OP_ENDIF")
+        self.assertFalse(Context(script=script, tx_version=2).evaluate())
+        script = Script.parse_string("0x02000000 OP_VERIF OP_1 OP_ELSE OP_0 OP_ENDIF")
+        self.assertFalse(Context(script=script, tx_version=3).evaluate())
 
     def test_two_phase_carries_stack(self):
         unlock = Script.parse_string("OP_2 OP_3 OP_ADD")
