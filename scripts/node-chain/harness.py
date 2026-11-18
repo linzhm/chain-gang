@@ -39,18 +39,18 @@ def tx_for(parents,amounts=None,sequences=None,locktime=0,version=2):
  seq=sequences or [0xffffffff]*len(parents)
  if amounts is None:amounts=[sum(p.tx_outs[0].amount for p in parents)-500_000]
  return Tx(version,[TxIn(p.id(),0,Script(),seq[i]) for i,p in enumerate(parents)],[TxOut(a,TRUE) for a in amounts],locktime)
-def local(tx,parents,heights=None):
+def local(tx,parents,heights=None,pregenesis_outpoints=None):
  try:
   if heights is None:tx.validate(parents)
-  else:tx.validate_with_chronicle_context(parents,rpc('getblockcount')+1,200,[(p.id(),0,h) for p,h in zip(parents,heights)],consensus_only=True)
+  else:tx.validate_with_chronicle_context(parents,rpc('getblockcount')+1,200,[(p.id(),0,h) for p,h in zip(parents,heights)],consensus_only=True,pregenesis_outpoints=pregenesis_outpoints)
   return {'accepted':True}
  except ValueError as e:return {'accepted':False,'error':str(e)}
-def admission(name,tx,parents,expected,heights=None):
+def admission(name,tx,parents,expected,heights=None,pregenesis_outpoints=None):
  before=pools()
  try:result=rpc('sendrawtransaction',raw(tx));error=None
  except RPCError as e:result=None;error=e.message
  after=pools();kind='regular' if tx.id() in after['regular'] else 'nonfinal' if tx.id() in after['nonfinal'] else 'rejected'
- row={'name':name,'txid':tx.id(),'tx':raw(tx),'parents':[raw(p) for p in parents],'height':rpc('getblockcount')+1,'library':local(tx,parents,heights),'mempool':kind,'rpc_result':result,'rpc_error':error,'before':before,'after':after,'expected':expected}
+ row={'name':name,'txid':tx.id(),'tx':raw(tx),'parents':[raw(p) for p in parents],'height':rpc('getblockcount')+1,'library':local(tx,parents,heights,pregenesis_outpoints),'mempool':kind,'rpc_result':result,'rpc_error':error,'before':before,'after':after,'expected':expected}
  log(row);assert kind==expected,(name,expected,kind,error)
  if kind in ('regular','nonfinal'):assert row['library']['accepted'], ('node accepts but library rejects',name,row['library'])
  if error and '16: mandatory-script-verify-flag-failed' in error:assert not row['library']['accepted'], ('mandatory script disagreement',name)
