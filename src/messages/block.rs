@@ -53,9 +53,13 @@ impl Block {
         Ok(outputs)
     }
 
-    /// Checks that the block is valid, assuming post-Genesis outputs belong to
+    /// Performs partial block/transaction checks, assuming post-Genesis outputs belong to
     /// the spending block's Chronicle era. For mixed/historical UTXOs use
     /// `validate_with_chronicle_context` with complete creation heights.
+    ///
+    /// This is not full node block validation. In particular, it does not check
+    /// transaction finality (nLockTime) and has no previous-block median-time-past
+    /// input for BIP113. Successful script validation is not proof of finality.
     pub fn validate(
         &self,
         height: i32,
@@ -68,6 +72,9 @@ impl Block {
 
     /// Validate with complete Chronicle UTXO metadata and configurable activation.
     /// Genesis and FORKID selection retain this library's existing network rules.
+    /// This selects script rules only; the partial-validation limitations on
+    /// [`Block::validate`] still apply. Chronicle context supplies neither a
+    /// previous-block MTP nor a stateful UTXO view.
     pub fn validate_with_chronicle_context(
         &self,
         height: i32,
