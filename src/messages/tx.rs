@@ -1,11 +1,11 @@
-use crate::chronicle::effective_chronicle_tx_version;
+use crate::chronicle::{activation_height, ChronicleValidationContext};
 use crate::messages::message::Payload;
 use crate::messages::{OutPoint, TxIn, TxOut, COINBASE_OUTPOINT_HASH, COINBASE_OUTPOINT_INDEX};
 use crate::network::Network;
 use crate::script::{
     eval_p2sh, eval_two_phase, eval_unlock_then_lock, is_push_only, op_codes,
-    uses_relaxed_malleability, uses_two_phase_eval, TransactionChecker, CONSENSUS_ONLY, NO_FLAGS,
-    PREGENESIS_RULES,
+    uses_relaxed_malleability, ContextualTransactionChecker, TransactionChecker, CONSENSUS_ONLY,
+    NO_FLAGS, PREGENESIS_RULES,
 };
 use crate::transaction::sighash::SigHashCache;
 use crate::util::{bounded_capacity, sha256d, var_int, ChainGangError, Hash256, Serializable};
@@ -41,7 +41,10 @@ impl Tx {
         sha256d(&b)
     }
 
-    /// Validates a non-coinbase transaction using version-only Chronicle gating (`tx.version > 1`).
+    /// Validates a non-coinbase transaction assuming Chronicle is active and
+    /// post-Genesis outputs were created after Chronicle. Malleability still
+    /// depends on the signed transaction version. For historical or mixed-era
+    /// outputs, use `validate_with_chronicle_context`.
     ///
     /// Checks what the node's mempool checks: consensus, plus the node's policy
     /// rules for non-malleable transactions (minimal pushes and numbers, an
@@ -61,6 +64,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
+            None,
             None,
             false,
         )
@@ -85,11 +89,15 @@ impl Tx {
             utxos,
             pregenesis_outputs,
             None,
+            None,
             true,
         )
     }
 
     /// Validates a non-coinbase transaction with BSV Chronicle activation height enforcement.
+    /// Output creation heights are unavailable here: post-Genesis outputs are
+    /// assumed to belong to the current era. Use `validate_with_chronicle_context`
+    /// for historical or mixed-era outputs.
     ///
     /// Policy rules included, as [`Tx::validate`]; see
     /// [`Tx::validate_at_height_consensus`] for consensus only.
@@ -108,6 +116,7 @@ impl Tx {
             utxos,
             pregenesis_outputs,
             Some((block_height, network)),
+            None,
             false,
         )
     }
@@ -129,10 +138,35 @@ impl Tx {
             utxos,
             pregenesis_outputs,
             Some((block_height, network)),
+            None,
             true,
         )
     }
 
+    /// Validate with explicit activation and output creation heights. Use this
+    /// for historical/mixed-era spends or non-default private-chain activation.
+    #[allow(clippy::too_many_arguments)]
+    pub fn validate_with_chronicle_context(
+        &self,
+        require_sighash_forkid: bool,
+        use_genesis_rules: bool,
+        utxos: &LinkedHashMap<OutPoint, TxOut>,
+        pregenesis_outputs: &HashSet<OutPoint>,
+        context: &ChronicleValidationContext<'_>,
+        consensus_only: bool,
+    ) -> Result<(), ChainGangError> {
+        self.validate_with_context(
+            require_sighash_forkid,
+            use_genesis_rules,
+            utxos,
+            pregenesis_outputs,
+            None,
+            Some(context),
+            consensus_only,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn validate_with_context(
         &self,
         require_sighash_forkid: bool,
@@ -140,6 +174,7 @@ impl Tx {
         utxos: &LinkedHashMap<OutPoint, TxOut>,
         pregenesis_outputs: &HashSet<OutPoint>,
         chronicle_context: Option<(u64, Network)>,
+        explicit_context: Option<&ChronicleValidationContext<'_>>,
         consensus_only: bool,
     ) -> Result<(), ChainGangError> {
         // Make sure neither in or out lists are empty
@@ -210,11 +245,15 @@ impl Tx {
 
         // Verify each script
         let mut sighash_cache = SigHashCache::new();
-        let (block_height, network) = match chronicle_context {
-            Some((height, net)) => (Some(height), Some(net)),
-            None => (None, None),
+        let active = if let Some(ctx) = explicit_context {
+            ctx.block_height >= ctx.activation_height
+        } else if let Some((height, network)) = chronicle_context {
+            activation_height(network).is_some_and(|activation| height >= activation)
+        } else {
+            true
         };
-        let script_version = effective_chronicle_tx_version(self.version, block_height, network);
+        // The inner signature checker uses this only for high-S acceptance.
+        let script_version = if active { self.version } else { 1 };
         for input in 0..self.inputs.len() {
             let tx_in = &self.inputs[input];
             let tx_out = utxos.get(&tx_in.prev_output).unwrap();
@@ -233,13 +272,40 @@ impl Tx {
                 ));
             }
 
-            let mut tx_checker = TransactionChecker {
+            let post_chronicle_utxo = if let Some(ctx) = explicit_context {
+                let height = ctx.utxo_heights.get(&tx_in.prev_output).ok_or_else(|| {
+                    ChainGangError::BadArgument("missing UTXO creation height".to_string())
+                })?;
+                if *height > ctx.block_height {
+                    return Err(ChainGangError::BadArgument(
+                        "UTXO creation height exceeds spending height".to_string(),
+                    ));
+                }
+                !pregenesis_utxo && *height >= ctx.activation_height
+            } else {
+                // Compatibility APIs lack creation heights. Documented assumption:
+                // post-Genesis UTXOs use the current era. Explicit API avoids it.
+                !pregenesis_utxo && active
+            };
+            let number_policy_limit = explicit_context.and_then(|ctx| ctx.script_num_policy_limit);
+            if number_policy_limit.is_some_and(|limit| limit != 0 && limit < 4) {
+                return Err(ChainGangError::BadArgument(
+                    "numeric policy limit below 4".to_string(),
+                ));
+            }
+            let inner = TransactionChecker {
                 tx: self,
                 sig_hash_cache: &mut sighash_cache,
                 input,
                 satoshis: tx_out.satoshis,
                 require_sighash_forkid,
                 script_tx_version: Some(script_version),
+            };
+            let mut tx_checker = ContextualTransactionChecker {
+                inner,
+                active,
+                post_chronicle_utxo,
+                number_policy_limit,
             };
 
             let era_flags = if !use_genesis_rules || is_pregenesis_input {
@@ -264,7 +330,7 @@ impl Tx {
                     &mut tx_checker,
                     flags,
                 )?;
-            } else if uses_two_phase_eval(script_version) {
+            } else if active {
                 eval_two_phase(
                     &tx_in.unlock_script.0,
                     &tx_out.lock_script.0,
