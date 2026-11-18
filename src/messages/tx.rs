@@ -41,13 +41,18 @@ impl Tx {
         sha256d(&b)
     }
 
+    /// This is stateless value/script validation, not full node admission. It
+    /// does not decide contextual finality, coinbase maturity, fee policy,
+    /// mempool conflicts or non-final-pool replacement. Even a non-final
+    /// transaction can pass here and be valid for the node's non-final pool.
+    ///
     /// Validates a non-coinbase transaction assuming Chronicle is active and
     /// post-Genesis outputs were created after Chronicle. Malleability still
     /// depends on the signed transaction version. For historical or mixed-era
     /// outputs, use `validate_with_chronicle_context`.
     ///
-    /// Checks what the node's mempool checks: consensus, plus the node's policy
-    /// rules for non-malleable transactions (minimal pushes and numbers, an
+    /// Checks values/inputs and scripts, plus selected script policy rules for
+    /// non-malleable transactions (minimal pushes and numbers, an
     /// empty multisig dummy, a clean stack). That is the right check before
     /// broadcast, since the node rejects a policy failure there anyway. A
     /// transaction in a block is held to consensus only; use
@@ -210,10 +215,9 @@ impl Tx {
             }
         }
 
-        // Check that lock_time <= INT_MAX because some clients interpret this differently
-        if self.lock_time > 2_147_483_647 {
-            return Err(ChainGangError::BadData("Lock time too large".to_string()));
-        }
+        // nLockTime is uint32_t in BSV, not a signed script number. Its full
+        // range is valid transaction data. Contextual finality is checked by
+        // the node using height/time and input sequences, not an INT_MAX cap.
 
         // Check that all inputs are in the utxo set and are in legal money range
         let mut total_in = 0;
@@ -747,10 +751,12 @@ mod tests {
             .is_err());
 
         let mut tx_test = tx.clone();
-        tx_test.lock_time = 4294967295;
+        tx_test.lock_time = u32::MAX;
+        // The field is unsigned. A future locktime is not malformed data;
+        // finality/admission require separate chain and input-sequence context.
         assert!(tx_test
             .validate(true, true, &utxos, &HashSet::new())
-            .is_err());
+            .is_ok());
 
         let mut tx_test = tx.clone();
         tx_test.inputs[0].prev_output.hash = Hash256([8; 32]);
