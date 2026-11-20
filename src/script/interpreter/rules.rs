@@ -175,11 +175,10 @@ pub(crate) fn validate_final_stack(stack: &Stack, policy: bool) -> Result<(), Ch
 
 pub(crate) fn verif_branch_exec<T: Checker>(
     checker: &T,
-    comparison: BigInt,
+    comparison: &[u8],
     invert: bool,
 ) -> Result<bool, ChainGangError> {
-    let version = BigInt::from(checker.tx_version()?);
-    let execute = version >= comparison;
+    let execute = comparison == checker.tx_version()?.to_le_bytes();
     Ok(if invert { !execute } else { execute })
 }
 
