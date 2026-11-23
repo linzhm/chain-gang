@@ -43,12 +43,10 @@ impl Tx {
 
     /// Validates a non-coinbase transaction using version-only Chronicle gating (`tx.version > 1`).
     ///
-    /// Checks what the node's mempool checks: consensus, plus the node's policy
-    /// rules for non-malleable transactions (minimal pushes and numbers, an
-    /// empty multisig dummy, a clean stack). That is the right check before
-    /// broadcast, since the node rejects a policy failure there anyway. A
-    /// transaction in a block is held to consensus only; use
-    /// [`Tx::validate_consensus`] for that.
+    /// Checks values, supplied inputs and scripts, with selected policy rules
+    /// for non-malleable transactions. This stateless check does not determine
+    /// contextual finality, coinbase maturity or complete node admission.
+    /// Use [`Tx::validate_consensus`] to omit selected script policy checks.
     pub fn validate(
         &self,
         require_sighash_forkid: bool,
@@ -173,11 +171,6 @@ impl Tx {
             {
                 return Err(ChainGangError::BadData("Unexpected coinbase".to_string()));
             }
-        }
-
-        // Check that lock_time <= INT_MAX because some clients interpret this differently
-        if self.lock_time > 2_147_483_647 {
-            return Err(ChainGangError::BadData("Lock time too large".to_string()));
         }
 
         // Check that all inputs are in the utxo set and are in legal money range
@@ -681,10 +674,10 @@ mod tests {
             .is_err());
 
         let mut tx_test = tx.clone();
-        tx_test.lock_time = 4294967295;
+        tx_test.lock_time = u32::MAX;
         assert!(tx_test
             .validate(true, true, &utxos, &HashSet::new())
-            .is_err());
+            .is_ok());
 
         let mut tx_test = tx.clone();
         tx_test.inputs[0].prev_output.hash = Hash256([8; 32]);
