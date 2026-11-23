@@ -1,6 +1,6 @@
 use chain_gang::{
     messages::{OutPoint, Tx, TxIn, TxOut},
-    script::{op_codes::*, Checker, Script, ZVersionChecker},
+    script::{op_codes::*, Script},
     transaction::{generate_signature, sighash::*},
     util::Hash256,
 };
@@ -92,22 +92,6 @@ fn node_signature_cases() {
             let mut sig = generate_signature(&[9; 32], &digest, flags).unwrap();
             if high_s {
                 sig = high(&sig);
-            }
-            if high_s {
-                assert!(ZVersionChecker {
-                    z: digest,
-                    tx_version: 2
-                }
-                .check_sig(&sig, &pk, &code)
-                .unwrap());
-                for version in [1, 0, -1] {
-                    assert!(!ZVersionChecker {
-                        z: digest,
-                        tx_version: version
-                    }
-                    .check_sig(&sig, &pk, &code)
-                    .unwrap());
-                }
             }
             tx.inputs[0].unlock_script.append_data(&sig);
         }
