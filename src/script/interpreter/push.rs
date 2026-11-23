@@ -14,26 +14,12 @@ use super::MAX_SCRIPT_ELEMENT_SIZE_PREGENESIS;
 pub fn is_push_only(script: &[u8]) -> bool {
     let mut i = 0;
     while i < script.len() {
-        let end = match script[i] {
-            OP_0 | OP_1NEGATE | OP_1..=OP_16 => i + 1,
-            len @ 1..=75 => i + 1 + len as usize,
-            OP_PUSHDATA1 => match script.get(i + 1) {
-                Some(&len) => i + 2 + len as usize,
-                None => return false,
-            },
-            OP_PUSHDATA2 => match script.get(i + 1..i + 3) {
-                Some(len) => i + 3 + u16::from_le_bytes([len[0], len[1]]) as usize,
-                None => return false,
-            },
-            OP_PUSHDATA4 => match script.get(i + 1..i + 5) {
-                Some(len) => i + 5 + u32::from_le_bytes([len[0], len[1], len[2], len[3]]) as usize,
-                None => return false,
-            },
-            _ => return false,
-        };
-        if end > script.len() {
+        if !matches!(script[i], OP_0..=OP_PUSHDATA4 | OP_1NEGATE | OP_1..=OP_16) {
             return false;
         }
+        let Ok(end) = next_op_cursor(i, script) else {
+            return false;
+        };
         i = end;
     }
     true
