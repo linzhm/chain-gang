@@ -650,7 +650,11 @@ fn discourage_nops_flag_controls_only_executed_upgradable_nops() {
 
 #[test]
 fn discourage_nops_flag_at_chronicle_activation_boundary() {
+    use serde_json::json;
+
     const ACTIVATION: u64 = 200;
+    let export = std::env::var_os("CHRONICLE_NOP_DIFF_OUTPUT");
+    let mut rows = Vec::new();
 
     for (opcode, operation, required_items) in [
         ("SUBSTR", "0x026162 1 1 SUBSTR 0x0162 EQUAL", 3),
@@ -669,7 +673,7 @@ fn discourage_nops_flag_at_chronicle_activation_boundary() {
                 (201, 201),
             ] {
                 for flag in [false, true] {
-                    let verify = |lock: &str| {
+                    let mut verify = |lock: &str, node_error: Option<&str>| {
                         let credit = crediting_tx(&parse_script(lock), 1000);
                         let tx = spending_tx(&credit, &[], version);
                         let outpoint = tx.inputs[0].prev_output.clone();
@@ -684,7 +688,7 @@ fn discourage_nops_flag_at_chronicle_activation_boundary() {
                             utxo_heights: &heights,
                             script_num_policy_limit: None,
                         };
-                        tx.validate_with_chronicle_context_and_nop_policy(
+                        let result = tx.validate_with_chronicle_context_and_nop_policy(
                             true,
                             true,
                             &utxos,
@@ -692,9 +696,34 @@ fn discourage_nops_flag_at_chronicle_activation_boundary() {
                             &ctx,
                             true,
                             flag,
-                        )
+                        );
+                        if export.is_some() {
+                            let flags = (1 << 16)
+                                | (1 << 18)
+                                | (1 << 19)
+                                | (u32::from(spent >= ACTIVATION) << 20)
+                                | (u32::from(created >= ACTIVATION) << 21)
+                                | (u32::from(flag) << 7);
+                            rows.push(json!({
+                                "name": format!("{lock} version={version} spent={spent} created={created} flag={flag}"),
+                                "spending_height": spent,
+                                "library": result.is_ok(),
+                                "expected": node_error.is_none(),
+                                "expected_description": node_error,
+                                "request": {
+                                    "tx": tx.as_hexstr(), "n": 0, "flags": flags, "reportflags": true,
+                                    "txo": {"lock": hex::encode(&credit.outputs[0].lock_script.0), "value": 1000, "height": created}
+                                }
+                            }));
+                        }
+                        result
                     };
-                    let result = verify(&format!("{opcode} 1"));
+                    let node_error = match (created >= ACTIVATION, flag) {
+                        (true, _) => Some("Operation not valid with the current stack size"),
+                        (false, true) => Some("NOPx reserved for soft-fork upgrades"),
+                        (false, false) => None,
+                    };
+                    let result = verify(&format!("{opcode} 1"), node_error);
                     let expected_error = match (created >= ACTIVATION, flag) {
                         (true, _) => Some(format!("Stack too small: {required_items}")),
                         (false, true) => Some("discouraged upgradeable NOP".to_owned()),
@@ -711,7 +740,7 @@ fn discourage_nops_flag_at_chronicle_activation_boundary() {
                         "{opcode}: version={version}, spent={spent}, created={created}, flag={flag}: expected {expected_error:?}, got {result:?}"
                     );
                     if created >= ACTIVATION {
-                        let result = verify(operation);
+                        let result = verify(operation, None);
                         assert!(
                             result.is_ok(),
                             "{operation}: version={version}, spent={spent}, created={created}, flag={flag}: {result:?}"
@@ -720,5 +749,10 @@ fn discourage_nops_flag_at_chronicle_activation_boundary() {
                 }
             }
         }
+    }
+    if let Some(path) = export {
+        assert_eq!(rows.len(), 180);
+        let file = std::fs::File::create(path).unwrap();
+        serde_json::to_writer_pretty(file, &rows).unwrap();
     }
 }
