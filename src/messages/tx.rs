@@ -30,6 +30,8 @@ pub struct Tx {
     /// Transaction outputs
     pub outputs: Vec<TxOut>,
     /// The block number or timestamp at which this transaction is unlocked
+    /// Stateless transaction validation accepts the full unsigned range.
+    /// Contextual finality depends on chain height, time and input sequences.
     pub lock_time: u32,
 }
 
@@ -43,10 +45,12 @@ impl Tx {
 
     /// Validates a non-coinbase transaction using version-only Chronicle gating (`tx.version > 1`).
     ///
-    /// Checks values, supplied inputs and scripts, with selected policy rules
-    /// for non-malleable transactions. This stateless check does not determine
-    /// contextual finality, coinbase maturity or complete node admission.
-    /// Use [`Tx::validate_consensus`] to omit selected script policy checks.
+    /// Checks what the node's mempool checks: consensus, plus the node's policy
+    /// rules for non-malleable transactions (minimal pushes and numbers, an
+    /// empty multisig dummy, a clean stack). That is the right check before
+    /// broadcast, since the node rejects a policy failure there anyway. A
+    /// transaction in a block is held to consensus only; use
+    /// [`Tx::validate_consensus`] for that.
     pub fn validate(
         &self,
         require_sighash_forkid: bool,
