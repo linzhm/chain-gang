@@ -1,9 +1,55 @@
+use std::{collections::HashSet, io::Cursor};
+
 use chain_gang::{
     messages::{OutPoint, Tx, TxIn, TxOut},
     script::{eval_two_phase, op_codes::*, Script, TxVersionChecker, CONSENSUS_ONLY},
-    util::Hash256,
+    util::{Hash256, Serializable},
 };
+use linked_hash_map::LinkedHashMap;
 use serde_json::json;
+
+#[test]
+fn chronicle_version_conditions_in_complete_transactions() {
+    // These cases exercise the actual transaction version and unlocking script.
+    // The inputs are synthetic and the prevout is supplied explicitly.
+    let cases = [
+        (
+            "flow-01071",
+            "0200000001ae82cc6b9e3b9ca11134f70e84d51a6d6a4fca6d3e11d4c3b493a395450894b800000000050401000000ffffffff010100000000000000015100000000",
+            "6651670068",
+            true,
+        ),
+        (
+            "flow-01073",
+            "020000000181642801742371895602c446791efcc4d487145e4a3aa55fc32faf1a5f4231ba000000000151ffffffff010100000000000000015100000000",
+            "6551670068",
+            false,
+        ),
+        (
+            "flow-01074",
+            "010000000199a7b8176a073eb4777c8474b2481f1c53b8484474f829943c0c43dde2680c4a000000000151ffffffff010100000000000000015100000000",
+            "6551670068",
+            false,
+        ),
+    ];
+    let mut failures = Vec::new();
+    for (name, raw_tx, lock_script, expected) in cases {
+        let tx = Tx::read(&mut Cursor::new(hex::decode(raw_tx).unwrap())).unwrap();
+        let mut utxos = LinkedHashMap::new();
+        utxos.insert(
+            tx.inputs[0].prev_output.clone(),
+            TxOut {
+                satoshis: 1000,
+                lock_script: Script(hex::decode(lock_script).unwrap()),
+            },
+        );
+        let result = tx.validate_consensus(true, true, &utxos, &HashSet::new());
+        if result.is_ok() != expected {
+            failures.push(format!("{name}: expected {expected}, got {result:?}"));
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
 
 #[test]
 fn chronicle_opcode_node_cases() {
