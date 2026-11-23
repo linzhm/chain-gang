@@ -166,12 +166,18 @@ impl Tx {
             ));
         }
 
-        // Make sure none of the inputs are coinbase transactions
+        // Each input must reference a distinct non-coinbase outpoint.
+        let mut seen_outpoints = HashSet::new();
         for tx_in in self.inputs.iter() {
             if tx_in.prev_output.hash == COINBASE_OUTPOINT_HASH
                 && tx_in.prev_output.index == COINBASE_OUTPOINT_INDEX
             {
                 return Err(ChainGangError::BadData("Unexpected coinbase".to_string()));
+            }
+            if !seen_outpoints.insert(&tx_in.prev_output) {
+                return Err(ChainGangError::BadData(
+                    "Duplicate input outpoint".to_string(),
+                ));
             }
         }
 
