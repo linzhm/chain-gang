@@ -130,3 +130,42 @@ fn canonical_scalars_and_key_shapes_keep_the_node_boundary() {
     }
     assert!(check(&[], &key, 1, false, false));
 }
+
+#[test]
+fn debug_checker_accepts_high_s_only_for_chronicle_versions() {
+    use chain_gang::transaction::generate_signature;
+    use k256::ecdsa::{signature::SignatureEncoding, Signature, SigningKey};
+    use num_bigint::BigUint;
+
+    fn high(sig: &[u8]) -> Vec<u8> {
+        let s = Signature::from_der(&sig[..sig.len() - 1]).unwrap();
+        let mut raw = s.to_bytes();
+        let n = BigUint::parse_bytes(
+            b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
+            16,
+        )
+        .unwrap();
+        let h = (n - BigUint::from_bytes_be(&raw[32..])).to_bytes_be();
+        raw[32..].fill(0);
+        raw[64 - h.len()..].copy_from_slice(&h);
+        let mut out = Signature::try_from(raw.as_ref()).unwrap().to_der().to_vec();
+        out.push(*sig.last().unwrap());
+        out
+    }
+
+    let private_key = [9; 32];
+    let key = SigningKey::from_slice(&private_key).unwrap();
+    let pubkey = key.verifying_key().to_sec1_bytes();
+    let digest = Hash256([3; 32]);
+    let signature = high(&generate_signature(&private_key, &digest, 0x61).unwrap());
+    for version in [-1, 0, 1, 2] {
+        let mut checker = ZVersionChecker {
+            z: digest,
+            tx_version: version,
+        };
+        assert_eq!(
+            checker.check_sig(&signature, &pubkey, &[]).unwrap(),
+            version > 1
+        );
+    }
+}
