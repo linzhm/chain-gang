@@ -162,6 +162,22 @@ fn consensus_accepts_constant_signature_but_wallet_refuses_to_create_it() {
         ],
         lock_time: 0,
     };
+    let mut missing_output = tx();
+    missing_output.inputs[0].prev_output = OutPoint {
+        hash: funding.hash(),
+        index: 2,
+    };
+    let before = missing_output.clone();
+    assert!(matches!(
+        wallet.sign_tx_input(
+            &funding,
+            &mut missing_output,
+            0,
+            SIGHASH_ALL | SIGHASH_FORKID
+        ),
+        Err(chain_gang::util::ChainGangError::BadArgument(_))
+    ));
+    assert_eq!(missing_output, before);
     let mut utxos = LinkedHashMap::new();
     for (index, output) in funding.outputs.iter().enumerate() {
         utxos.insert(
