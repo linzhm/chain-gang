@@ -319,3 +319,71 @@ fn old_utxo_opcodes_after_branch_return_are_not_executed() {
         assert!(result.is_ok(), "opcode={opcode}: {result:?}");
     }
 }
+
+#[test]
+fn signature_encoding_errors_precede_inactive_chronicle() {
+    // Node v1.2.3 CheckSignatureEncoding checks DER, then defined hash type,
+    // then whether Chronicle is enabled, before requiring FORKID.
+    let point = OutPoint {
+        hash: Hash256([19; 32]),
+        index: 0,
+    };
+    let heights = HashMap::from([(point.clone(), 199)]);
+    let ctx = ChronicleValidationContext::new(199, 200, &heights, None);
+    for multi in [false, true] {
+        let mut lock = Script::new();
+        if multi {
+            lock.append(OP_1);
+        }
+        let key = k256::ecdsa::SigningKey::from_slice(&[9; 32]).unwrap();
+        lock.append_data(&key.verifying_key().to_sec1_bytes());
+        if multi {
+            lock.append(OP_1);
+            lock.append(OP_CHECKMULTISIG);
+        } else {
+            lock.append(OP_CHECKSIG);
+        }
+        let utxos = LinkedHashMap::from_iter([(
+            point.clone(),
+            TxOut {
+                satoshis: 2,
+                lock_script: lock,
+            },
+        )]);
+        for (sig, expected) in [
+            ("0061", "Non-canonical DER signature"),
+            (
+                "300602010102010160",
+                "Signature hash type missing or not understood",
+            ),
+            ("300602010102010121", "SIGHASH_CHRONICLE before activation"),
+            ("300602010102010161", "SIGHASH_CHRONICLE before activation"),
+        ] {
+            let mut unlock = Script::new();
+            if multi {
+                unlock.append(OP_0);
+            }
+            unlock.append_data(&hex::decode(sig).unwrap());
+            let tx = Tx {
+                version: 1,
+                inputs: vec![TxIn {
+                    prev_output: point.clone(),
+                    unlock_script: unlock,
+                    sequence: u32::MAX,
+                }],
+                outputs: vec![TxOut {
+                    satoshis: 1,
+                    lock_script: Script(vec![OP_1]),
+                }],
+                lock_time: 0,
+            };
+            let err = tx
+                .validate_with_chronicle_context(true, true, &utxos, &HashSet::new(), &ctx, true)
+                .unwrap_err();
+            assert!(
+                matches!(&err, chain_gang::util::ChainGangError::ScriptError(s) if s == expected),
+                "sig={sig} multisig={multi}: {err}"
+            );
+        }
+    }
+}
