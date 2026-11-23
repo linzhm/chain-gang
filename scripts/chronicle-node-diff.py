@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare exported Rust cases with BSV v1.2.3 verifyscript in Apple Container.
+"""Compare exported Rust cases with BSV v1.2.3 verifyscript in an isolated container.
 Run cargo test with CHRONICLE_DIFF_OUTPUT=/absolute/cases.json, then:
 python3 scripts/chronicle-node-diff.py cases.json results.json
 BSV_CONTAINER selects the isolated node (default cg-chronicle-node).
@@ -13,10 +13,13 @@ import sys
 
 cases = json.load(open(sys.argv[1]))
 node = os.environ.get('BSV_CONTAINER', 'cg-chronicle-node')
-cli = ['container', 'exec', '-i', node, 'bitcoin-cli', '-regtest',
+runtime = os.environ.get('BSV_CONTAINER_RUNTIME', 'container')
+if runtime not in ('container', 'docker'):
+    raise ValueError('BSV_CONTAINER_RUNTIME must be container or docker')
+cli = [runtime, 'exec', '-i', node, 'bitcoin-cli', '-regtest',
        '-rpcuser=cgtest', '-rpcpassword=local-regtest-only', '-stdin']
 version = subprocess.check_output(
-    ['container', 'exec', node, 'bitcoind', '--version'], text=True).splitlines()[0]
+    [runtime, 'exec', node, 'bitcoind', '--version'], text=True).splitlines()[0]
 results = []
 for start in range(0, len(cases), 32):
     batch = cases[start:start + 32]
@@ -37,5 +40,5 @@ for start in range(0, len(cases), 32):
     print(f'{len(results)}/{len(cases)} checked', flush=True)
 json.dump({'node_version': version,
            'image': 'docker.io/bitcoinsv/bitcoin-sv@sha256:d96fe4786a00e5fc10bc9e0e76a6006376f9472d4eb74d07e4c1e0d019493d33',
-           'runtime': 'Apple Container', 'cases': results}, open(sys.argv[2], 'w'), indent=2)
+           'runtime': runtime, 'cases': results}, open(sys.argv[2], 'w'), indent=2)
 sys.exit(0 if all(r['matches'] for r in results) else 1)

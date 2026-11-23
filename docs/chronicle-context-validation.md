@@ -43,6 +43,11 @@ BSV_CONTAINER=cg-chronicle-context-v3 python3 scripts/chronicle-node-diff.py /tm
 
 Mining here establishes real activation context; synthetic test spends are still checked through `verifyscript` with supplied outputs. We did not mine these spending transactions or establish mempool admission. Genesis metadata/configuration remains an explicit existing responsibility. The old context-free API necessarily assumes output eras; callers needing fidelity must use complete metadata.
 
-The vendored vector adapter's known-difference list shrinks for restored opcode activation; old NOP policy cases are now classified under its already-existing lack of DISCOURAGE_UPGRADABLE_NOPS flag modeling. This is not a whitelist for live-node mismatches. Other Chronicle and historical differences remain documented separately.
+The vector adapter models `DISCOURAGE_UPGRADABLE_NOPS` independently of other policy flags. Rows 1093–1097 exercise SUBSTR, LEFT, RIGHT, LSHIFTNUM and RSHIFTNUM before Chronicle restores them for newly created outputs. The 40-case replay of these five opcodes covers transaction versions 1 and 2, both output eras and both settings of the policy flag. All 40 matched BSV Node v1.2.3 under isolated Linux Docker regtest with explicit flags.
+
+```sh
+CHRONICLE_NOP_DIFF_OUTPUT=/tmp/nop.json cargo test --test script_vectors discourage_nops_flag_uses_each_utxo_creation_height
+BSV_CONTAINER_RUNTIME=docker BSV_CONTAINER=cg-chain-review-node python3 scripts/chronicle-node-diff.py /tmp/nop.json /tmp/nop-result.json
+```
 
 The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived tests intentionally omit flags instead.
