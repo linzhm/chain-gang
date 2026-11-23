@@ -360,7 +360,13 @@ impl Tx {
                 input,
                 satoshis: tx_out.satoshis,
                 require_sighash_forkid,
-                script_tx_version: Some(script_version),
+                // The inner checker uses this override for low-S policy.
+                // The outer checker exposes the actual signed version to opcodes.
+                script_tx_version: Some(if uses_relaxed_malleability(script_version) {
+                    script_version
+                } else {
+                    1
+                }),
             };
             let mut tx_checker = ContextualTransactionChecker {
                 inner,

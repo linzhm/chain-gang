@@ -339,7 +339,7 @@ impl Checker for TransactionChecker<'_> {
         let der_sig = &sig[0..sig.len() - 1];
 
         let mut signature = Signature::from_der(der_sig)?;
-        if (self.chronicle_script_version() as i32) > 1 {
+        if self.chronicle_script_version() > 1 {
             // Chronicle lifts the low-S rule; normalize so k256 accepts high-S encodings.
             signature = signature.normalize_s();
         }
