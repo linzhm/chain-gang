@@ -14,7 +14,8 @@ use super::MAX_SCRIPT_ELEMENT_SIZE_PREGENESIS;
 pub fn is_push_only(script: &[u8]) -> bool {
     let mut i = 0;
     while i < script.len() {
-        if !matches!(script[i], OP_0..=OP_PUSHDATA4 | OP_1NEGATE | OP_1..=OP_16) {
+        // IsPushOnly includes OP_RESERVED, although executing it fails.
+        if script[i] > OP_16 {
             return false;
         }
         let Ok(end) = next_op_cursor(i, script) else {
