@@ -69,6 +69,14 @@ For context-free inspection, `tx_engine.engine.util` provides
 `max_script_num_length` and `MAX_SCRIPT_NUM_LENGTH_CHRONICLE`. These helper
 results do not replace the spent output era needed by transaction validation.
 
+## Script number limits
+
+`max_script_num_length(1)` and `max_script_num_length(2)` in
+`tx_engine.engine.util` report the 750,000-byte post-Genesis and
+32,000,000-byte Chronicle limits for version-based debugging. With explicit
+transaction validation context, the spent output's era determines the
+consensus limit.
+
 ## References
 
 - [Chronicle rule selection and Rust API](Chronicle.md)
