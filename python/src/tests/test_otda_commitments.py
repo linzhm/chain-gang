@@ -198,6 +198,7 @@ class OtdaCommitmentsTest(unittest.TestCase):
             with self.subTest(case=name):
                 self.assertEqual(accepted, expected, error)
                 if not expected:
+                    assert error is not None
                     reason = 'OP_CHECKMULTISIGVERIFY failed' if multi else 'OP_CHECKSIGVERIFY failed'
                     self.assertIn(reason, error)
             yield {'name': name, 'expected': expected, 'library': accepted,
