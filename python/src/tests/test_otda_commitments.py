@@ -43,9 +43,9 @@ def output_bytes(output):
 
 
 def tx_bytes(version, inputs, outputs, locktime):
-    return (u32(version) + bytes([len(inputs)])
-            + b''.join(point + counted(script) + u32(seq) for point, script, seq in inputs)
-            + bytes([len(outputs)]) + b''.join(map(output_bytes, outputs)) + u32(locktime))
+    encoded_inputs = b''.join(point + counted(script) + u32(seq) for point, script, seq in inputs)
+    encoded_outputs = b''.join(map(output_bytes, outputs))
+    return u32(version) + bytes([len(inputs)]) + encoded_inputs + bytes([len(outputs)]) + encoded_outputs + u32(locktime)
 
 
 def signing_digest(flag, index, inputs, outputs, amount, bip143_code, original_code):
@@ -76,8 +76,9 @@ def signing_digest(flag, index, inputs, outputs, amount, bip143_code, original_c
         output_hash = hash256(b''.join(map(output_bytes, outputs)))
     elif base == SINGLE and index < len(outputs):
         output_hash = hash256(output_bytes(outputs[index]))
-    return hash256(u32(2) + prevouts + sequences + point + counted(bip143_code)
-                   + struct.pack('<qI', amount, sequence) + output_hash + u32(0) + u32(flag))
+    preimage = u32(2) + prevouts + sequences + point + counted(bip143_code)
+    preimage += struct.pack('<qI', amount, sequence) + output_hash + u32(0) + u32(flag)
+    return hash256(preimage)
 
 
 def preserves_signature(flag, missing, change):
@@ -126,6 +127,7 @@ class OtdaCommitmentsTest(unittest.TestCase):
         flags = [flag, flag ^ CHRONICLE] if multi else [flag]
         verify = (b'\x52' + counted(pubkey) * 2 + b'\x52\xaf' if multi
                   else counted(pubkey) + b'\xad')
+
         # Both algorithms retain the pushed 0xab. Only OTDA removes the skipped opcode.
         def code(skipped):
             return verify + b'\x00\x63' + skipped + b'\x68' + counted(SEPARATOR) + DROP + TRUE
