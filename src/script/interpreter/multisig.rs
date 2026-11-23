@@ -68,7 +68,7 @@ pub(crate) fn check_multisig<T: Checker>(
     // early termination. Current BSV still applies this to entries without FORKID.
     let mut cleaned_script = script.to_vec();
     for sig in sigs.iter() {
-        if needs_signature_cleanup(sig) {
+        if prefork(sig) {
             cleaned_script = remove_sig(sig, &cleaned_script);
         }
     }
@@ -100,7 +100,8 @@ pub(crate) fn check_multisig<T: Checker>(
     Ok(success)
 }
 
-pub(crate) fn needs_signature_cleanup(sig: &[u8]) -> bool {
+/// Whether this entry is eligible for legacy FindAndDelete cleanup.
+pub(crate) fn prefork(sig: &[u8]) -> bool {
     match sig.last() {
         None => true,
         Some(flag) => flag & SIGHASH_FORKID == 0,
