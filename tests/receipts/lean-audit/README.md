@@ -1,3 +1,5 @@
+> Update: the three VERIF/VERNOTIF differences below occur on the older PR #250 head. Upstream main e08a8cf already includes PR #248's byte-comparison fix. Replaying these three original transactions against main produces the Lean results. The prior description of them as current-main defects was incorrect. Fresh node replay remains pending.
+
 # Lean differential audit, 2026-11-24
 
 Lean commit: `1c051eaef1077cc95e5d1618686d5efacc4aa097`. The evaluator build completed and its self-test passed. The 52 PR #250 cases use the recorded Node v1.2.3 receipts. Lean replay used block heights from those receipts and assumed prevout height 600, an era-equivalent post-Chronicle height, because exact funding heights were not supplied. See ../node-chain/chronicle-separator-exit-final/lean-replay.json for each input and result.
