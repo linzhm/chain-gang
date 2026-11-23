@@ -1,0 +1,149 @@
+{
+  "case": "duplicate-outpoint-inflated-input",
+  "synthetic_prevouts": true,
+  "parent_transaction": null,
+  "transaction_hex": "020000000211111111111111111111111111111111111111111111111111111111111111110000000000ffffffff11111111111111111111111111111111111111111111111111111111111111110000000000ffffffff01dc05000000000000015100000000",
+  "prevouts": [
+    {
+      "txid": "1111111111111111111111111111111111111111111111111111111111111111",
+      "vout": 0,
+      "script": "51",
+      "satoshis": 1000,
+      "height": 200
+    },
+    {
+      "txid": "1111111111111111111111111111111111111111111111111111111111111111",
+      "vout": 0,
+      "script": "51",
+      "satoshis": 1000,
+      "height": 200
+    }
+  ],
+  "lean": {
+    "commit": "1c051eaef1077cc95e5d1618686d5efacc4aa097",
+    "argv": [
+      "eval/bsvs",
+      "eval",
+      "--tx",
+      "020000000211111111111111111111111111111111111111111111111111111111111111110000000000ffffffff11111111111111111111111111111111111111111111111111111111111111110000000000ffffffff01dc05000000000000015100000000",
+      "--prevouts",
+      "[{\"txid\": \"1111111111111111111111111111111111111111111111111111111111111111\", \"vout\": 0, \"script\": \"51\", \"satoshis\": 1000, \"height\": 200}, {\"txid\": \"1111111111111111111111111111111111111111111111111111111111111111\", \"vout\": 0, \"script\": \"51\", \"satoshis\": 1000, \"height\": 200}]",
+      "--config",
+      "sv-regtest",
+      "--genesis-height",
+      "1",
+      "--chronicle-height",
+      "200",
+      "--spend-height",
+      "201",
+      "--consensus",
+      "true"
+    ],
+    "output": {
+      "code": null,
+      "coinbase": false,
+      "config": "sv-regtest(genesis=1,chronicle=200)",
+      "gate": {
+        "code": "bad-txns-inputs-duplicate",
+        "verdict": "invalid"
+      },
+      "input": null,
+      "inputs": [
+        {
+          "code": null,
+          "input": 0,
+          "message": null,
+          "params": {
+            "consensus": true,
+            "era": "post-chronicle",
+            "explicit_flags": null,
+            "flags": {
+              "hex": "0x3d402b",
+              "names": [
+                "P2SH",
+                "STRICTENC",
+                "LOW_S",
+                "SIGPUSHONLY",
+                "NULLFAIL",
+                "SIGHASH_FORKID",
+                "GENESIS",
+                "UTXO_AFTER_GENESIS",
+                "CHRONICLE",
+                "UTXO_AFTER_CHRONICLE"
+              ],
+              "word": 4014123
+            },
+            "limits": {
+              "maxOpsPerScript": 4294967295,
+              "maxPubKeysPerMultiSig": 4294967295,
+              "maxScriptNumLength": 32000000,
+              "maxScriptSize": 4294967295,
+              "maxStackMemoryUsage": 9223372036854776000
+            },
+            "spend_height": 201,
+            "utxo_era": "post-chronicle",
+            "utxo_height": 200
+          },
+          "verdict": "valid"
+        },
+        {
+          "code": null,
+          "input": 1,
+          "message": null,
+          "params": {
+            "consensus": true,
+            "era": "post-chronicle",
+            "explicit_flags": null,
+            "flags": {
+              "hex": "0x3d402b",
+              "names": [
+                "P2SH",
+                "STRICTENC",
+                "LOW_S",
+                "SIGPUSHONLY",
+                "NULLFAIL",
+                "SIGHASH_FORKID",
+                "GENESIS",
+                "UTXO_AFTER_GENESIS",
+                "CHRONICLE",
+                "UTXO_AFTER_CHRONICLE"
+              ],
+              "word": 4014123
+            },
+            "limits": {
+              "maxOpsPerScript": 4294967295,
+              "maxPubKeysPerMultiSig": 4294967295,
+              "maxScriptNumLength": 32000000,
+              "maxScriptSize": 4294967295,
+              "maxStackMemoryUsage": 9223372036854776000
+            },
+            "spend_height": 201,
+            "utxo_era": "post-chronicle",
+            "utxo_height": 200
+          },
+          "verdict": "valid"
+        }
+      ],
+      "message": null,
+      "reference": "bitcoin-sv v1.2.3 6504a3af (docs/PROVENANCE.md)",
+      "spec": "spec@1c051ea",
+      "verdict": "valid"
+    },
+    "stderr": "wrapper fingerprint write denied by sandbox (path omitted)",
+    "exit_code": 0
+  },
+  "chain_gang": {
+    "commit": "8b60b71a12a69fdcb465d3e627dbf6f43d6ed081",
+    "command": "cargo run --offline",
+    "stdout": "tx=020000000211111111111111111111111111111111111111111111111111111111111111110000000000ffffffff11111111111111111111111111111111111111111111111111111111111111110000000000ffffffff01dc05000000000000015100000000\npolicy=Ok(())\nconsensus=Ok(())\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  "node": {
+    "source_commit": "6504a3aff65ba97c0f6c80962b033e35ecbfed4b",
+    "source_url": "https://github.com/bitcoin-sv/bitcoin-sv/blob/6504a3aff65ba97c0f6c80962b033e35ecbfed4b/src/validation.cpp#L626-L635",
+    "live_replay": "not run",
+    "container_status_exit_code": 1,
+    "container_status_stderr": "Error: The operation couldn’t be completed. Operation not permitted\n"
+  }
+}
