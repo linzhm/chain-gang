@@ -401,13 +401,18 @@ impl PyTx {
         let processed = build_processed_utxos(&tx, &utxos)?;
         let mut heights = HashMap::new();
         for (hash, index, height) in utxo_heights {
-            heights.insert(
-                OutPoint {
-                    hash: Hash256::decode(&hash)?,
-                    index,
-                },
-                height,
-            );
+            let point = OutPoint {
+                hash: Hash256::decode(&hash)?,
+                index,
+            };
+            if heights
+                .insert(point, height)
+                .is_some_and(|prior| prior != height)
+            {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Conflicting UTXO creation heights for {hash}:{index}"
+                )));
+            }
         }
         let mut pregenesis = HashSet::new();
         for (hash, index) in pregenesis_outpoints.unwrap_or_default() {

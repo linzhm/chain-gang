@@ -313,7 +313,7 @@ impl Tx {
             ValidationEra::Explicit(ctx) => (ctx.block_height >= ctx.activation_height, Some(ctx)),
         };
         let number_policy_limit = explicit_context.and_then(|ctx| ctx.script_num_policy_limit);
-        if number_policy_limit.is_some_and(|limit| limit != 0 && limit < 4) {
+        if !consensus_only && number_policy_limit.is_some_and(|limit| limit != 0 && limit < 4) {
             return Err(ChainGangError::BadArgument(
                 "numeric policy limit below 4".to_string(),
             ));

@@ -278,6 +278,7 @@ fn explicit_metadata_and_policy_errors() {
     assert!(validate(&heights, Some(4), true).is_ok());
     assert!(validate(&heights, Some(0), false).is_ok());
     assert!(validate(&heights, Some(3), false).is_err());
+    assert!(validate(&heights, Some(3), true).is_ok());
     assert_eq!(
         effective_chronicle_tx_version(u32::MAX, Some(0), Some(Network::BSV_Regtest)),
         u32::MAX

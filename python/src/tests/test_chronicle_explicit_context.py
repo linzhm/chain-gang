@@ -64,6 +64,15 @@ class ChronicleContextTests(unittest.TestCase):
                     spend.validate_with_chronicle_context([parent], 200, 200, heights,
                                                          consensus_only=True)
 
+    def test_duplicate_creation_heights(self):
+        parent = Tx(1, [TxIn('11' * 32, 0, Script())], [TxOut(100, Script.parse_string('OP_1'))], 0)
+        spend = Tx(1, [TxIn(parent.id(), 0, Script())], [TxOut(90, Script.parse_string('OP_1'))], 0)
+        old, new = (parent.id(), 0, 199), (parent.id(), 0, 200)
+        spend.validate_with_chronicle_context([parent], 200, 200, [old, old])
+        for heights in ([old, new], [new, old]):
+            with self.subTest(heights=heights), self.assertRaisesRegex(ValueError, 'Conflicting UTXO creation heights'):
+                spend.validate_with_chronicle_context([parent], 200, 200, heights)
+
     def test_released_defaults_and_signed_version(self):
         for network, height in [('mainnet', 943816), ('testnet', 1713168),
                                 ('stn', 250), ('regtest', 15000)]:
