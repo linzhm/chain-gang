@@ -633,6 +633,8 @@ fn discourage_nops_flag_controls_only_executed_upgradable_nops() {
 
 #[test]
 fn discourage_nops_flag_uses_each_utxo_creation_height() {
+    let export = std::env::var_os("CHRONICLE_NOP_DIFF_OUTPUT");
+    let mut rows = Vec::new();
     for lock in [
         "0x0161 0 1 SUBSTR DROP 1",
         "0x0161 1 LEFT DROP 1",
@@ -662,6 +664,24 @@ fn discourage_nops_flag_uses_each_utxo_creation_height() {
                     true,
                     flag,
                 );
+                if export.is_some() {
+                    // Explicit flags select the UTXO era. A txo height would
+                    // make the node derive that flag from its local chain.
+                    let flags = (1 << 16)
+                        | (1 << 18)
+                        | (1 << 19)
+                        | (1 << 20)
+                        | (u32::from(created >= 200) << 21)
+                        | (u32::from(flag) << 7);
+                    rows.push(serde_json::json!({
+                        "name": format!("{lock}, version={version}, created={created}, flag={flag}"),
+                        "library": result.is_ok(), "expected": expected,
+                        "request": {
+                            "tx": tx.as_hexstr(), "n": 0, "flags": flags, "reportflags": true,
+                            "txo": {"lock": hex::encode(&credit.outputs[0].lock_script.0), "value": 1000}
+                        }
+                    }));
+                }
                 assert_eq!(
                     result.is_ok(),
                     expected,
@@ -669,5 +689,9 @@ fn discourage_nops_flag_uses_each_utxo_creation_height() {
                 );
             }
         }
+    }
+    if let Some(path) = export {
+        let file = std::fs::File::create(path).unwrap();
+        serde_json::to_writer_pretty(file, &rows).unwrap();
     }
 }
