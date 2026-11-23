@@ -107,7 +107,14 @@ pub fn core_eval<T: Checker>(
                     ))
                 }
                 OP_SUBSTR | OP_LEFT | OP_RIGHT | OP_LSHIFTNUM | OP_RSHIFTNUM => {
-                    if conditions.active() && flags & super::CONSENSUS_ONLY == 0 {
+                    let discourage = if flags & super::EXPLICIT_UPGRADABLE_NOPS_POLICY != 0 {
+                        flags & super::DISCOURAGE_UPGRADABLE_NOPS != 0
+                    } else {
+                        flags & super::CONSENSUS_ONLY == 0
+                            || flags & super::DISCOURAGE_UPGRADABLE_NOPS != 0
+                    };
+                    let exec = conditions.active() && !returned_in_branch;
+                    if exec && discourage {
                         return Err(ChainGangError::ScriptError(
                             "discouraged upgradeable NOP".to_string(),
                         ));
@@ -870,6 +877,10 @@ pub fn core_eval<T: Checker>(
                         let msg = "OP_CHECKLOCKTIMEVERIFY failed".to_string();
                         return Err(ChainGangError::ScriptError(msg));
                     }
+                } else if flags & super::DISCOURAGE_UPGRADABLE_NOPS != 0 {
+                    return Err(ChainGangError::ScriptError(
+                        "discouraged upgradeable NOP".into(),
+                    ));
                 }
             }
             OP_CHECKSEQUENCEVERIFY => {
@@ -882,9 +893,19 @@ pub fn core_eval<T: Checker>(
                         let msg = "OP_CHECKSEQUENCEVERIFY failed".to_string();
                         return Err(ChainGangError::ScriptError(msg));
                     }
+                } else if flags & super::DISCOURAGE_UPGRADABLE_NOPS != 0 {
+                    return Err(ChainGangError::ScriptError(
+                        "discouraged upgradeable NOP".into(),
+                    ));
                 }
             }
-            OP_NOP1 => {}
+            OP_NOP1 | OP_NOP9 | OP_NOP10 => {
+                if flags & super::DISCOURAGE_UPGRADABLE_NOPS != 0 {
+                    return Err(ChainGangError::ScriptError(
+                        "discouraged upgradeable NOP".into(),
+                    ));
+                }
+            }
             OP_LSHIFTNUM => {
                 check_stack_size(2, &stack)?;
                 let n = pop_num_for_eval(&mut stack, policy)?;
@@ -905,8 +926,6 @@ pub fn core_eval<T: Checker>(
                 let v = stack.pop().unwrap();
                 stack.push(rshift(&v, n as usize));
             }
-            OP_NOP9 => {}
-            OP_NOP10 => {}
             _ => {
                 let msg = format!("Bad opcode: {}, index {}", script[i], i);
                 return Err(ChainGangError::ScriptError(msg));
