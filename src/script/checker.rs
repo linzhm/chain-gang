@@ -6,6 +6,43 @@ use crate::util::{ChainGangError, Hash256};
 
 use k256::ecdsa::{signature::hazmat::PrehashVerifier, Signature, VerifyingKey};
 
+/// BIP66 checks the encoding of R and S independently of their scalar values.
+fn valid_script_signature_der(sig: &[u8]) -> bool {
+    if !(9..=73).contains(&sig.len()) || sig[0] != 0x30 || usize::from(sig[1]) != sig.len() - 3 {
+        return false;
+    }
+    let r = usize::from(sig[3]);
+    if 5 + r >= sig.len() {
+        return false;
+    }
+    let s = usize::from(sig[5 + r]);
+    if r + s + 7 != sig.len() || sig[2] != 2 || r == 0 || sig[4] & 0x80 != 0 {
+        return false;
+    }
+    if r > 1 && sig[4] == 0 && sig[5] & 0x80 == 0 {
+        return false;
+    }
+    if sig[r + 4] != 2 || s == 0 || sig[r + 6] & 0x80 != 0 {
+        return false;
+    }
+    !(s > 1 && sig[r + 6] == 0 && sig[r + 7] & 0x80 == 0)
+}
+
+/// Checks that precede activation and FORKID checks in CheckSignatureEncoding.
+fn check_der_and_hash_type(sig: &[u8], sighash_type: u8) -> Result<(), ChainGangError> {
+    if !valid_script_signature_der(sig) {
+        return Err(ChainGangError::ScriptError(
+            "Non-canonical DER signature".to_string(),
+        ));
+    }
+    if !is_defined_sighash_type(sighash_type) {
+        return Err(ChainGangError::ScriptError(
+            UNDEFINED_SIGHASH_TYPE.to_string(),
+        ));
+    }
+    Ok(())
+}
+
 /// Locktimes greater than or equal to this are interpreted as timestamps. Less then, block heights.
 const LOCKTIME_THRESHOLD: i64 = 500000000;
 
@@ -38,38 +75,8 @@ const UNDEFINED_SIGHASH_TYPE: &str = "Signature hash type missing or not underst
 /// BSV's BIP66 encoding check is separate from ECDSA scalar validity.
 /// Zero or out-of-range R/S can be DER-canonical yet fail verification.
 fn check_script_encodings(sig: &[u8], pubkey: &[u8]) -> Result<(), ChainGangError> {
-    let valid_der = || {
-        if !(9..=73).contains(&sig.len()) || sig[0] != 0x30 || usize::from(sig[1]) != sig.len() - 3
-        {
-            return false;
-        }
-        let r = usize::from(sig[3]);
-        if 5 + r >= sig.len() {
-            return false;
-        }
-        let s = usize::from(sig[5 + r]);
-        if r + s + 7 != sig.len() || sig[2] != 2 || r == 0 || sig[4] & 0x80 != 0 {
-            return false;
-        }
-        if r > 1 && sig[4] == 0 && sig[5] & 0x80 == 0 {
-            return false;
-        }
-        if sig[r + 4] != 2 || s == 0 || sig[r + 6] & 0x80 != 0 {
-            return false;
-        }
-        !(s > 1 && sig[r + 6] == 0 && sig[r + 7] & 0x80 == 0)
-    };
-    if !sig.is_empty() && !valid_der() {
-        return Err(ChainGangError::ScriptError(
-            "Non-canonical DER signature".to_string(),
-        ));
-    }
     if let Some(&sighash_type) = sig.last() {
-        if !is_defined_sighash_type(sighash_type) {
-            return Err(ChainGangError::ScriptError(
-                UNDEFINED_SIGHASH_TYPE.to_string(),
-            ));
-        }
+        check_der_and_hash_type(sig, sighash_type)?;
         if sighash_type & SIGHASH_FORKID == 0 {
             return Err(ChainGangError::ScriptError(
                 "SIGHASH_FORKID not present".to_string(),
