@@ -14,3 +14,7 @@ The corpus comparison uses the fixed #250 chain-gang commit `8b60b71a12a69fdcb46
 The three `flow-verif-candidates.json` entries and `duplicate-outpoint-candidate.json` require fresh node execution. Their recorded comparisons and the node v1.2.3 source are evidence of candidate discrepancies. These receipts do not report a fresh node replay. The source corpus includes previously recorded node results, which agreed with Lean for all four corpora.
 
 The corpus adapter is included as `corpus-adapter.rs`. Its full-transaction verdict is compared with Lean's script verdict with the gate checked separately.
+
+## Sighash vectors
+
+Lean matched the two reference digest columns for all 1,000 BSV Node v1.2.3 vectors. The chain-gang internal u32 verifier test also passed all 2,000 digest comparisons on the identical vector file (SHA-256 `9c1afcaf81e8482f818345efa8a3f0610f6541b975023b58550d50ad2a557f63`). The public u8 API cannot directly represent these 32-bit vector hash types. For the mainnet corpus, all three current-era entries matched Lean and the chain-gang public API. Five historical entries were skipped. See `mainnet-sighash.json`.
