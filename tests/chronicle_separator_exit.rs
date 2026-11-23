@@ -1,6 +1,6 @@
 //! Replay current Chronicle transactions and their committed parents from
 //! Apple Container's BSV Node v1.2.3 admission and block validation.
-//! Cases and raw node receipts: https://github.com/linzhm/chain-gang/blob/cdb21295886ce68bae2b225437765700fcc40c3c/tests/receipts/node-chain/chronicle-separator-exit-final/README.md
+//! Cases are based on BSV Node v1.2.3 regtest validation.
 use chain_gang::{
     messages::{OutPoint, Tx},
     util::Serializable,
