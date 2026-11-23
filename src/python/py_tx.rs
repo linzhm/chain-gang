@@ -416,12 +416,12 @@ impl PyTx {
                 index,
             });
         }
-        let context = crate::chronicle::ChronicleValidationContext {
+        let context = crate::chronicle::ChronicleValidationContext::new(
             block_height,
             activation_height,
-            utxo_heights: &heights,
+            &heights,
             script_num_policy_limit,
-        };
+        );
         match discourage_upgradable_nops {
             Some(discourage) => tx.validate_with_chronicle_context_and_nop_policy(
                 true,

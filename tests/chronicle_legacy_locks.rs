@@ -181,12 +181,7 @@ fn legacy_lock_opcodes_keep_their_utxo_era_across_chronicle() {
                 }],
                 lock_time,
             };
-            let ctx = ChronicleValidationContext {
-                block_height: height,
-                activation_height: 200,
-                utxo_heights: &heights,
-                script_num_policy_limit: None,
-            };
+            let ctx = ChronicleValidationContext::new(height, 200, &heights, None);
             let result = tx.validate_with_chronicle_context(true, true, &utxos, &old, &ctx, true);
             assert_eq!(
                 result.is_ok(),
@@ -247,12 +242,7 @@ fn mixed_inputs_do_not_share_chronicle_utxo_flags() {
                 lock_time: 0,
             };
             let heights = HashMap::from([(a.clone(), 100), (b.clone(), created)]);
-            let ctx = ChronicleValidationContext {
-                block_height: 200,
-                activation_height: 200,
-                utxo_heights: &heights,
-                script_num_policy_limit: None,
-            };
+            let ctx = ChronicleValidationContext::new(200, 200, &heights, None);
             assert_eq!(
                 tx.validate_with_chronicle_context(true, true, &utxos, &HashSet::new(), &ctx, true)
                     .is_ok(),

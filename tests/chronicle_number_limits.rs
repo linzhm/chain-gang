@@ -58,12 +58,7 @@ fn script_number_era_boundaries() {
                         lock_script: lock.clone(),
                     },
                 );
-                let ctx = ChronicleValidationContext {
-                    block_height: 200,
-                    activation_height: 200,
-                    utxo_heights: &heights,
-                    script_num_policy_limit: None,
-                };
+                let ctx = ChronicleValidationContext::new(200, 200, &heights, None);
                 let got = tx.validate_with_chronicle_context(
                     true,
                     true,

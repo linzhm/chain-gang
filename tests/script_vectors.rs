@@ -652,12 +652,7 @@ fn discourage_nops_flag_uses_each_utxo_creation_height() {
                 (200, true, true),
             ] {
                 let heights = HashMap::from([(outpoint.clone(), created)]);
-                let ctx = ChronicleValidationContext {
-                    block_height: 200,
-                    activation_height: 200,
-                    utxo_heights: &heights,
-                    script_num_policy_limit: None,
-                };
+                let ctx = ChronicleValidationContext::new(200, 200, &heights, None);
                 let result = tx.validate_with_chronicle_context_and_nop_policy(
                     true,
                     true,

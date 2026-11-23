@@ -51,12 +51,7 @@ fn disabled_double_ops_respect_execution_and_utxo_era() {
                     } else {
                         HashSet::new()
                     };
-                    let ctx = ChronicleValidationContext {
-                        block_height: 200,
-                        activation_height: 200,
-                        utxo_heights: &heights,
-                        script_num_policy_limit: None,
-                    };
+                    let ctx = ChronicleValidationContext::new(200, 200, &heights, None);
                     let result = tx.validate_with_chronicle_context(
                         true,
                         true,
@@ -117,12 +112,12 @@ fn explicit_chronicle_context_matches_node() {
                             lock_script: Script(code.clone()),
                         },
                     );
-                    let ctx = ChronicleValidationContext {
-                        block_height: if active { 200 } else { 199 },
-                        activation_height: 200,
-                        utxo_heights: &heights,
-                        script_num_policy_limit: None,
-                    };
+                    let ctx = ChronicleValidationContext::new(
+                        if active { 200 } else { 199 },
+                        200,
+                        &heights,
+                        None,
+                    );
                     let library = tx
                         .validate_with_chronicle_context(
                             true,
@@ -201,12 +196,12 @@ fn explicit_chronicle_context_matches_node() {
                         lock_script: lock.clone(),
                     },
                 );
-                let ctx = ChronicleValidationContext {
-                    block_height: if active { 200 } else { 199 },
-                    activation_height: 200,
-                    utxo_heights: &heights,
-                    script_num_policy_limit: None,
-                };
+                let ctx = ChronicleValidationContext::new(
+                    if active { 200 } else { 199 },
+                    200,
+                    &heights,
+                    None,
+                );
                 let library = tx
                     .validate_with_chronicle_context(
                         true,
@@ -264,12 +259,7 @@ fn explicit_metadata_and_policy_errors() {
             true,
             &utxos,
             &HashSet::new(),
-            &ChronicleValidationContext {
-                block_height: 200,
-                activation_height: 200,
-                utxo_heights: heights,
-                script_num_policy_limit: policy,
-            },
+            &ChronicleValidationContext::new(200, 200, heights, policy),
             consensus,
         )
     };
@@ -322,12 +312,7 @@ fn old_utxo_opcodes_after_branch_return_are_not_executed() {
             lock_time: 0,
         };
         let heights = HashMap::from([(point, 100)]);
-        let ctx = ChronicleValidationContext {
-            block_height: 200,
-            activation_height: 200,
-            utxo_heights: &heights,
-            script_num_policy_limit: None,
-        };
+        let ctx = ChronicleValidationContext::new(200, 200, &heights, None);
         let result =
             tx.validate_with_chronicle_context(true, true, &utxos, &HashSet::new(), &ctx, false);
         assert!(result.is_ok(), "opcode={opcode}: {result:?}");

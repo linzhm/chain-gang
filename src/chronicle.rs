@@ -122,6 +122,7 @@ pub fn effective_chronicle_tx_version(
 /// Explicit Chronicle chain and UTXO context. Heights are mandatory for every
 /// spent output; missing metadata is an error, never guessed from tx.version.
 /// Genesis classification still comes from the existing pregenesis output set.
+#[non_exhaustive]
 pub struct ChronicleValidationContext<'a> {
     /// Height of the block containing the spending transaction.
     pub block_height: u64,
@@ -131,6 +132,23 @@ pub struct ChronicleValidationContext<'a> {
     pub utxo_heights: &'a std::collections::HashMap<crate::messages::OutPoint, u64>,
     /// Optional numeric policy bound in bytes; ignored by consensus validation.
     pub script_num_policy_limit: Option<usize>,
+}
+
+impl<'a> ChronicleValidationContext<'a> {
+    /// Creates a validation context from the spending height and the supplied UTXO heights.
+    pub fn new(
+        block_height: u64,
+        activation_height: u64,
+        utxo_heights: &'a std::collections::HashMap<crate::messages::OutPoint, u64>,
+        script_num_policy_limit: Option<usize>,
+    ) -> Self {
+        Self {
+            block_height,
+            activation_height,
+            utxo_heights,
+            script_num_policy_limit,
+        }
+    }
 }
 
 #[cfg(test)]

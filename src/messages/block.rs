@@ -401,12 +401,7 @@ mod tests {
         );
         for (created, expected) in [(100, false), (200, true)] {
             let heights = HashMap::from([(point.clone(), created)]);
-            let context = ChronicleValidationContext {
-                block_height: 200,
-                activation_height: 200,
-                utxo_heights: &heights,
-                script_num_policy_limit: None,
-            };
+            let context = ChronicleValidationContext::new(200, 200, &heights, None);
             assert_eq!(
                 block
                     .validate_with_chronicle_context(
