@@ -14,6 +14,11 @@ Reference: bitcoin-sv commit
 - Digest APIs now return the consensus sentinel where they previously returned
   `BadArgument`. Its raw bytes are `01` followed by 31 zero bytes; display hex
   reverses them. The verifier uses these same consensus semantics.
+- Python `sig_hash` and `sig_hash_checksig_index` retain their existing
+  fail-closed behavior and reject constant digests with `ValueError`. These
+  helpers are commonly used for signing, and returning the sentinel would
+  silently change their prior safety behavior. Rust callers that explicitly
+  need consensus digest behavior can use `sighash`.
 - Preimage APIs still return `BadArgument`, with an explicit no-serialized-preimage
   message. The protocol returns the sentinel directly; returning the sentinel
   bytes as a preimage would cause callers to hash the wrong value.
