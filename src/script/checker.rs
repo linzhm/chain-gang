@@ -64,6 +64,18 @@ fn check_script_encodings(sig: &[u8], pubkey: &[u8]) -> Result<(), ChainGangErro
             "Non-canonical DER signature".to_string(),
         ));
     }
+    if let Some(&sighash_type) = sig.last() {
+        if !is_defined_sighash_type(sighash_type) {
+            return Err(ChainGangError::ScriptError(
+                UNDEFINED_SIGHASH_TYPE.to_string(),
+            ));
+        }
+        if sighash_type & SIGHASH_FORKID == 0 {
+            return Err(ChainGangError::ScriptError(
+                "SIGHASH_FORKID not present".to_string(),
+            ));
+        }
+    }
     // STRICTENC also checks public-key shape for an empty signature. Curve
     // membership, however, is a verification failure rather than an encoding error.
     if !matches!(
@@ -181,18 +193,6 @@ impl Checker for ZChecker {
         if sig.is_empty() {
             return Ok(false);
         }
-        let sighash_type = sig[sig.len() - 1];
-        if !is_defined_sighash_type(sighash_type) {
-            return Err(ChainGangError::ScriptError(
-                UNDEFINED_SIGHASH_TYPE.to_string(),
-            ));
-        }
-        if sighash_type & SIGHASH_FORKID == 0 {
-            return Err(ChainGangError::ScriptError(
-                "SIGHASH_FORKID not present".to_string(),
-            ));
-        }
-
         let sig_hash = self.z;
         let der_sig = &sig[0..sig.len() - 1];
         Ok(verify_script_ecdsa(&sig_hash.0, der_sig, pubkey, false))
@@ -270,18 +270,6 @@ impl Checker for ZVersionChecker {
         if sig.is_empty() {
             return Ok(false);
         }
-        let sighash_type = sig[sig.len() - 1];
-        if !is_defined_sighash_type(sighash_type) {
-            return Err(ChainGangError::ScriptError(
-                UNDEFINED_SIGHASH_TYPE.to_string(),
-            ));
-        }
-        if sighash_type & SIGHASH_FORKID == 0 {
-            return Err(ChainGangError::ScriptError(
-                "SIGHASH_FORKID not present".to_string(),
-            ));
-        }
-
         let sig_hash = self.z;
         let der_sig = &sig[0..sig.len() - 1];
         Ok(verify_script_ecdsa(
@@ -351,18 +339,6 @@ impl Checker for TransactionChecker<'_> {
             return Ok(false);
         }
         let sighash_type = sig[sig.len() - 1];
-        // STRICTENC came with FORKID; before it, transactions with undefined
-        // types were valid and old blocks still hold some.
-        if self.require_sighash_forkid && !is_defined_sighash_type(sighash_type) {
-            return Err(ChainGangError::ScriptError(
-                UNDEFINED_SIGHASH_TYPE.to_string(),
-            ));
-        }
-        if self.require_sighash_forkid && sighash_type & SIGHASH_FORKID == 0 {
-            return Err(ChainGangError::ScriptError(
-                "SIGHASH_FORKID not present".to_string(),
-            ));
-        }
         // `script` is the script code the interpreter built for this check —
         // cut at the last executed OP_CODESEPARATOR, signature removed — so it
         // is hashed as given. `sighash` would cut it a second time.

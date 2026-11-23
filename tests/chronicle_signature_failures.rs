@@ -2,12 +2,22 @@
 use chain_gang::{
     messages::{OutPoint, Tx, TxIn, TxOut},
     script::{op_codes::*, Checker, Script, ZVersionChecker},
-    util::Hash256,
+    util::{ChainGangError, Hash256},
 };
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashSet;
 
 fn check(sig: &[u8], key: &[u8], version: u32, multisig: bool, verify: bool) -> bool {
+    validate(sig, key, version, multisig, verify).is_ok()
+}
+
+fn validate(
+    sig: &[u8],
+    key: &[u8],
+    version: u32,
+    multisig: bool,
+    verify: bool,
+) -> Result<(), ChainGangError> {
     let point = OutPoint {
         hash: Hash256([19; 32]),
         index: 0,
@@ -51,7 +61,6 @@ fn check(sig: &[u8], key: &[u8], version: u32, multisig: bool, verify: bool) -> 
         lock_time: 0,
     };
     tx.validate_consensus(true, true, &utxos, &HashSet::new())
-        .is_ok()
 }
 
 #[test]
@@ -167,5 +176,30 @@ fn debug_checker_accepts_high_s_only_for_chronicle_versions() {
             checker.check_sig(&signature, &pubkey, &[]).unwrap(),
             version > 1
         );
+    }
+}
+
+#[test]
+fn signature_errors_precede_pubkey_errors() {
+    for (signature, expected) in [
+        (
+            "300602010102010160",
+            "Signature hash type missing or not understood",
+        ),
+        ("300602010102010101", "SIGHASH_FORKID not present"),
+        ("3006020101020101ffff", "Non-canonical DER signature"),
+        ("300602010102010141", "Non-canonical public key"),
+        ("", "Non-canonical public key"),
+    ] {
+        let sig = hex::decode(signature).unwrap();
+        for multisig in [false, true] {
+            for verify in [false, true] {
+                let err = validate(&sig, &[2, 0], 2, multisig, verify).unwrap_err();
+                assert!(
+                    matches!(err, ChainGangError::ScriptError(ref msg) if msg == expected),
+                    "signature={signature} multisig={multisig} verify={verify}: {err}"
+                );
+            }
+        }
     }
 }
