@@ -1,5 +1,5 @@
 import json, hashlib, struct, subprocess, os, pathlib
-W='/Users/linzheming/Codex/2026-11-19/referenced-chatgpt-conversation-this-is-an/work'
+W=os.environ['BSV_AUDIT_WORK']
 p=pathlib.Path(W+'/chain-admission/separator-final-checkout/tests/receipts/node-chain/chronicle-separator-exit-final/receipts.json')
 d=json.loads(p.read_text()); records=d['records']; lookup={x['name']:x for x in records}
 class Reader:
