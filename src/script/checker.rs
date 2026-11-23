@@ -37,11 +37,7 @@ const UNDEFINED_SIGHASH_TYPE: &str = "Signature hash type missing or not underst
 
 /// BSV's BIP66 encoding check is separate from ECDSA scalar validity.
 /// Zero or out-of-range R/S can be DER-canonical yet fail verification.
-fn check_script_encodings(
-    sig: &[u8],
-    pubkey: &[u8],
-    strict_pubkey: bool,
-) -> Result<(), ChainGangError> {
+fn check_script_encodings(sig: &[u8], pubkey: &[u8]) -> Result<(), ChainGangError> {
     let valid_der = || {
         if !(9..=73).contains(&sig.len()) || sig[0] != 0x30 || usize::from(sig[1]) != sig.len() - 3
         {
@@ -70,12 +66,10 @@ fn check_script_encodings(
     }
     // STRICTENC also checks public-key shape for an empty signature. Curve
     // membership, however, is a verification failure rather than an encoding error.
-    if strict_pubkey
-        && !matches!(
-            (pubkey.len(), pubkey.first()),
-            (33, Some(2 | 3)) | (65, Some(4))
-        )
-    {
+    if !matches!(
+        (pubkey.len(), pubkey.first()),
+        (33, Some(2 | 3)) | (65, Some(4))
+    ) {
         return Err(ChainGangError::ScriptError(
             "Non-canonical public key".to_string(),
         ));
@@ -183,7 +177,7 @@ impl Checker for ZChecker {
         // CHECK(MULTI)SIG", passed by its encoding checks and simply false. It
         // is also the one failing signature NULLFAIL allows, which the
         // interpreter already exempts (#210).
-        check_script_encodings(sig, pubkey, true)?;
+        check_script_encodings(sig, pubkey)?;
         if sig.is_empty() {
             return Ok(false);
         }
@@ -272,7 +266,7 @@ impl Checker for ZVersionChecker {
         // CHECK(MULTI)SIG", passed by its encoding checks and simply false. It
         // is also the one failing signature NULLFAIL allows, which the
         // interpreter already exempts (#210).
-        check_script_encodings(sig, pubkey, true)?;
+        check_script_encodings(sig, pubkey)?;
         if sig.is_empty() {
             return Ok(false);
         }
@@ -351,7 +345,7 @@ impl Checker for TransactionChecker<'_> {
         // is also the one failing signature NULLFAIL allows, which the
         // interpreter already exempts (#210).
         if self.require_sighash_forkid {
-            check_script_encodings(sig, pubkey, true)?;
+            check_script_encodings(sig, pubkey)?;
         }
         if sig.is_empty() {
             return Ok(false);
