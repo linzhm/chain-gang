@@ -5,7 +5,7 @@ use crate::network::Network;
 use crate::script::{
     eval_p2sh, eval_two_phase, eval_unlock_then_lock, is_push_only, op_codes,
     uses_relaxed_malleability, ContextualTransactionChecker, TransactionChecker, CONSENSUS_ONLY,
-    NO_FLAGS, PREGENESIS_RULES,
+    DISCOURAGE_UPGRADABLE_NOPS, EXPLICIT_UPGRADABLE_NOPS_POLICY, NO_FLAGS, PREGENESIS_RULES,
 };
 use crate::transaction::sighash::SigHashCache;
 use crate::util::{bounded_capacity, sha256d, var_int, ChainGangError, Hash256, Serializable};
@@ -72,6 +72,7 @@ impl Tx {
             None,
             None,
             false,
+            None,
         )
     }
 
@@ -96,6 +97,7 @@ impl Tx {
             None,
             None,
             true,
+            None,
         )
     }
 
@@ -123,6 +125,7 @@ impl Tx {
             Some((block_height, network)),
             None,
             false,
+            None,
         )
     }
 
@@ -145,6 +148,7 @@ impl Tx {
             Some((block_height, network)),
             None,
             true,
+            None,
         )
     }
 
@@ -168,6 +172,57 @@ impl Tx {
             None,
             Some(context),
             consensus_only,
+            None,
+        )
+    }
+
+    /// Validate with a separately selected upgradeable-NOP policy.
+    ///
+    /// Output-era assumptions are the same as [`Tx::validate`]. Other policy
+    /// rules continue to be selected by `consensus_only`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn validate_with_nop_policy(
+        &self,
+        require_sighash_forkid: bool,
+        use_genesis_rules: bool,
+        utxos: &LinkedHashMap<OutPoint, TxOut>,
+        pregenesis_outputs: &HashSet<OutPoint>,
+        consensus_only: bool,
+        discourage_upgradable_nops: bool,
+    ) -> Result<(), ChainGangError> {
+        self.validate_with_context(
+            require_sighash_forkid,
+            use_genesis_rules,
+            utxos,
+            pregenesis_outputs,
+            None,
+            None,
+            consensus_only,
+            Some(discourage_upgradable_nops),
+        )
+    }
+
+    /// Validate with explicit output eras and upgradeable-NOP policy.
+    #[allow(clippy::too_many_arguments)]
+    pub fn validate_with_chronicle_context_and_nop_policy(
+        &self,
+        require_sighash_forkid: bool,
+        use_genesis_rules: bool,
+        utxos: &LinkedHashMap<OutPoint, TxOut>,
+        pregenesis_outputs: &HashSet<OutPoint>,
+        context: &ChronicleValidationContext<'_>,
+        consensus_only: bool,
+        discourage_upgradable_nops: bool,
+    ) -> Result<(), ChainGangError> {
+        self.validate_with_context(
+            require_sighash_forkid,
+            use_genesis_rules,
+            utxos,
+            pregenesis_outputs,
+            None,
+            Some(context),
+            consensus_only,
+            Some(discourage_upgradable_nops),
         )
     }
 
@@ -181,6 +236,7 @@ impl Tx {
         chronicle_context: Option<(u64, Network)>,
         explicit_context: Option<&ChronicleValidationContext<'_>>,
         consensus_only: bool,
+        discourage_upgradable_nops: Option<bool>,
     ) -> Result<(), ChainGangError> {
         // Make sure neither in or out lists are empty
         if self.inputs.is_empty() {
@@ -317,11 +373,17 @@ impl Tx {
             } else {
                 NO_FLAGS
             };
-            let flags = if consensus_only {
+            let mut flags = if consensus_only {
                 era_flags | CONSENSUS_ONLY
             } else {
                 era_flags
             };
+            if let Some(discourage) = discourage_upgradable_nops {
+                flags |= EXPLICIT_UPGRADABLE_NOPS_POLICY;
+                if discourage {
+                    flags |= DISCOURAGE_UPGRADABLE_NOPS;
+                }
+            }
 
             if pregenesis_utxo && is_p2sh(&tx_out.lock_script.0) {
                 // BIP-16 gives a pre-Genesis P2SH output its meaning, in any

@@ -382,7 +382,9 @@ impl PyTx {
     }
 
     /// Validate using explicit UTXO creation heights and activation configuration.
-    #[pyo3(signature = (utxos, block_height, activation_height, utxo_heights, consensus_only=false, script_num_policy_limit=None, pregenesis_outpoints=None))]
+    /// ``discourage_upgradable_nops`` selects that policy independently. ``None``
+    /// retains the existing default behavior.
+    #[pyo3(signature = (utxos, block_height, activation_height, utxo_heights, consensus_only=false, script_num_policy_limit=None, pregenesis_outpoints=None, discourage_upgradable_nops=None))]
     #[allow(clippy::too_many_arguments)]
     fn validate_with_chronicle_context(
         &self,
@@ -393,6 +395,7 @@ impl PyTx {
         consensus_only: bool,
         script_num_policy_limit: Option<usize>,
         pregenesis_outpoints: Option<Vec<(String, u32)>>,
+        discourage_upgradable_nops: Option<bool>,
     ) -> PyResult<()> {
         let tx = self.as_tx()?;
         let processed = build_processed_utxos(&tx, &utxos)?;
@@ -419,14 +422,26 @@ impl PyTx {
             utxo_heights: &heights,
             script_num_policy_limit,
         };
-        Ok(tx.validate_with_chronicle_context(
-            true,
-            true,
-            &processed,
-            &pregenesis,
-            &context,
-            consensus_only,
-        )?)
+        match discourage_upgradable_nops {
+            Some(discourage) => tx.validate_with_chronicle_context_and_nop_policy(
+                true,
+                true,
+                &processed,
+                &pregenesis,
+                &context,
+                consensus_only,
+                discourage,
+            )?,
+            None => tx.validate_with_chronicle_context(
+                true,
+                true,
+                &processed,
+                &pregenesis,
+                &context,
+                consensus_only,
+            )?,
+        }
+        Ok(())
     }
 
     /// Parse Bytes to produce Tx
