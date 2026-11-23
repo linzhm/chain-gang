@@ -88,14 +88,11 @@ pub(crate) fn check_multisig<T: Checker>(
             success = false;
         }
     }
-    if !success && tx_enforces_malleability_rules(checker) {
-        for remaining in &sigs {
-            if !remaining.is_empty() {
-                return Err(ChainGangError::ScriptError(
-                    "OP_CHECKMULTISIG NULLFAIL".to_string(),
-                ));
-            }
-        }
+    if !success && tx_enforces_malleability_rules(checker) && sigs.iter().any(|sig| !sig.is_empty())
+    {
+        return Err(ChainGangError::ScriptError(
+            "OP_CHECKMULTISIG NULLFAIL".to_string(),
+        ));
     }
     Ok(success)
 }
