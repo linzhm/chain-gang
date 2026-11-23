@@ -649,53 +649,75 @@ fn discourage_nops_flag_controls_only_executed_upgradable_nops() {
 }
 
 #[test]
-fn discourage_nops_flag_uses_each_utxo_creation_height() {
-    for lock in [
-        "0x0161 0 1 SUBSTR DROP 1",
-        "0x0161 1 LEFT DROP 1",
-        "0x0161 1 RIGHT DROP 1",
-        "1 1 LSHIFTNUM DROP 1",
-        "1 1 RSHIFTNUM DROP 1",
+fn discourage_nops_flag_at_chronicle_activation_boundary() {
+    const ACTIVATION: u64 = 200;
+
+    for (opcode, operation, required_items) in [
+        ("SUBSTR", "0x026162 1 1 SUBSTR 0x0162 EQUAL", 3),
+        ("LEFT", "0x026162 1 LEFT 0x0161 EQUAL", 2),
+        ("RIGHT", "0x026162 1 RIGHT 0x0162 EQUAL", 2),
+        ("LSHIFTNUM", "1 1 LSHIFTNUM 2 EQUAL", 2),
+        ("RSHIFTNUM", "4 1 RSHIFTNUM 2 EQUAL", 2),
     ] {
         for version in [1, 2] {
-            let credit = crediting_tx(&parse_script(lock), 1000);
-            let tx = spending_tx(&credit, &[], version);
-            let outpoint = tx.inputs[0].prev_output.clone();
-            let utxos = LinkedHashMap::from_iter([(outpoint.clone(), credit.outputs[0].clone())]);
-            for (created, flag, expected) in [
-                (199, false, true),
-                (199, true, false),
-                (200, false, true),
-                (200, true, true),
+            for (spent, created) in [
+                (199, 198),
+                (200, 199),
+                (200, 200),
+                (201, 199),
+                (201, 200),
+                (201, 201),
             ] {
-                let heights = HashMap::from([(outpoint.clone(), created)]);
-                let ctx = ChronicleValidationContext {
-                    block_height: 200,
-                    activation_height: 200,
-                    utxo_heights: &heights,
-                    script_num_policy_limit: None,
-                };
-                let result = tx.validate_with_chronicle_context_and_nop_policy(
-                    true,
-                    true,
-                    &utxos,
-                    &HashSet::new(),
-                    &ctx,
-                    true,
-                    flag,
-                );
-                if !expected {
+                for flag in [false, true] {
+                    let verify = |lock: &str| {
+                        let credit = crediting_tx(&parse_script(lock), 1000);
+                        let tx = spending_tx(&credit, &[], version);
+                        let outpoint = tx.inputs[0].prev_output.clone();
+                        let utxos = LinkedHashMap::from_iter([(
+                            outpoint.clone(),
+                            credit.outputs[0].clone(),
+                        )]);
+                        let heights = HashMap::from([(outpoint, created)]);
+                        let ctx = ChronicleValidationContext {
+                            block_height: spent,
+                            activation_height: ACTIVATION,
+                            utxo_heights: &heights,
+                            script_num_policy_limit: None,
+                        };
+                        tx.validate_with_chronicle_context_and_nop_policy(
+                            true,
+                            true,
+                            &utxos,
+                            &HashSet::new(),
+                            &ctx,
+                            true,
+                            flag,
+                        )
+                    };
+                    let result = verify(&format!("{opcode} 1"));
+                    let expected_error = match (created >= ACTIVATION, flag) {
+                        (true, _) => Some(format!("Stack too small: {required_items}")),
+                        (false, true) => Some("discouraged upgradeable NOP".to_owned()),
+                        (false, false) => None,
+                    };
                     assert!(
-                        matches!(result, Err(ChainGangError::ScriptError(ref message)) if message == "discouraged upgradeable NOP"),
-                        "{lock}, version={version}, created={created}, flag={flag}: {result:?}"
+                        match (&result, expected_error.as_deref()) {
+                            (Ok(()), None) => true,
+                            (Err(ChainGangError::ScriptError(actual)), Some(expected)) => {
+                                actual == expected
+                            }
+                            _ => false,
+                        },
+                        "{opcode}: version={version}, spent={spent}, created={created}, flag={flag}: expected {expected_error:?}, got {result:?}"
                     );
-                    continue;
+                    if created >= ACTIVATION {
+                        let result = verify(operation);
+                        assert!(
+                            result.is_ok(),
+                            "{operation}: version={version}, spent={spent}, created={created}, flag={flag}: {result:?}"
+                        );
+                    }
                 }
-                assert_eq!(
-                    result.is_ok(),
-                    expected,
-                    "{lock}, version={version}, created={created}, flag={flag}: {result:?}"
-                );
             }
         }
     }
