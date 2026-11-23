@@ -57,12 +57,12 @@ class ChronicleContextTests(unittest.TestCase):
         for version in (1, 2):
             spend = Tx(version, [TxIn(parent.id(), 0, Script())],
                        [TxOut(90, Script.parse_string('OP_1'))], 0)
-            spend.validate_with_chronicle_context([parent], 200, 200,
-                                                 [(parent.id(), 0, 200)], consensus_only=True)
+            spend.validate_with_chronicle_context(
+                [parent], 200, 200, [(parent.id(), 0, 200)], consensus_only=True)
             for heights in ([], [(parent.id(), 0, 100)], [(parent.id(), 0, 201)]):
                 with self.assertRaises(ValueError):
-                    spend.validate_with_chronicle_context([parent], 200, 200, heights,
-                                                         consensus_only=True)
+                    spend.validate_with_chronicle_context(
+                        [parent], 200, 200, heights, consensus_only=True)
 
     def test_duplicate_creation_heights(self):
         parent = Tx(1, [TxIn('11' * 32, 0, Script())], [TxOut(100, Script.parse_string('OP_1'))], 0)
