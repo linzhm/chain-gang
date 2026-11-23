@@ -33,6 +33,12 @@ pub struct Tx {
     pub lock_time: u32,
 }
 
+enum ValidationEra<'a> {
+    AssumeActive,
+    AtHeight(u64, Network),
+    Explicit(&'a ChronicleValidationContext<'a>),
+}
+
 impl Tx {
     /// Calculates the hash of the transaction also known as the txid
     pub fn hash(&self) -> Hash256 {
@@ -69,8 +75,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            None,
-            None,
+            ValidationEra::AssumeActive,
             false,
             None,
         )
@@ -94,8 +99,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            None,
-            None,
+            ValidationEra::AssumeActive,
             true,
             None,
         )
@@ -122,8 +126,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            Some((block_height, network)),
-            None,
+            ValidationEra::AtHeight(block_height, network),
             false,
             None,
         )
@@ -145,8 +148,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            Some((block_height, network)),
-            None,
+            ValidationEra::AtHeight(block_height, network),
             true,
             None,
         )
@@ -169,8 +171,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            None,
-            Some(context),
+            ValidationEra::Explicit(context),
             consensus_only,
             None,
         )
@@ -195,8 +196,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            None,
-            None,
+            ValidationEra::AssumeActive,
             consensus_only,
             Some(discourage_upgradable_nops),
         )
@@ -219,8 +219,7 @@ impl Tx {
             use_genesis_rules,
             utxos,
             pregenesis_outputs,
-            None,
-            Some(context),
+            ValidationEra::Explicit(context),
             consensus_only,
             Some(discourage_upgradable_nops),
         )
@@ -233,8 +232,7 @@ impl Tx {
         use_genesis_rules: bool,
         utxos: &LinkedHashMap<OutPoint, TxOut>,
         pregenesis_outputs: &HashSet<OutPoint>,
-        chronicle_context: Option<(u64, Network)>,
-        explicit_context: Option<&ChronicleValidationContext<'_>>,
+        era: ValidationEra<'_>,
         consensus_only: bool,
         discourage_upgradable_nops: Option<bool>,
     ) -> Result<(), ChainGangError> {
@@ -306,13 +304,20 @@ impl Tx {
 
         // Verify each script
         let mut sighash_cache = SigHashCache::new();
-        let active = if let Some(ctx) = explicit_context {
-            ctx.block_height >= ctx.activation_height
-        } else if let Some((height, network)) = chronicle_context {
-            activation_height(network).is_some_and(|activation| height >= activation)
-        } else {
-            true
+        let (active, explicit_context) = match era {
+            ValidationEra::AssumeActive => (true, None),
+            ValidationEra::AtHeight(height, network) => (
+                activation_height(network).is_some_and(|activation| height >= activation),
+                None,
+            ),
+            ValidationEra::Explicit(ctx) => (ctx.block_height >= ctx.activation_height, Some(ctx)),
         };
+        let number_policy_limit = explicit_context.and_then(|ctx| ctx.script_num_policy_limit);
+        if number_policy_limit.is_some_and(|limit| limit != 0 && limit < 4) {
+            return Err(ChainGangError::BadArgument(
+                "numeric policy limit below 4".to_string(),
+            ));
+        }
         // The inner signature checker uses this only for high-S acceptance.
         let script_version = if active { self.version } else { 1 };
         for input in 0..self.inputs.len() {
@@ -348,12 +353,6 @@ impl Tx {
                 // post-Genesis UTXOs use the current era. Explicit API avoids it.
                 !pregenesis_utxo && active
             };
-            let number_policy_limit = explicit_context.and_then(|ctx| ctx.script_num_policy_limit);
-            if number_policy_limit.is_some_and(|limit| limit != 0 && limit < 4) {
-                return Err(ChainGangError::BadArgument(
-                    "numeric policy limit below 4".to_string(),
-                ));
-            }
             let inner = TransactionChecker {
                 tx: self,
                 sig_hash_cache: &mut sighash_cache,
@@ -375,7 +374,7 @@ impl Tx {
                 number_policy_limit,
             };
 
-            let era_flags = if !use_genesis_rules || is_pregenesis_input {
+            let era_flags = if pregenesis_utxo {
                 PREGENESIS_RULES
             } else {
                 NO_FLAGS

@@ -13,6 +13,8 @@ import subprocess
 import sys
 
 cases = json.load(open(sys.argv[1]))
+if not isinstance(cases, list) or not cases:
+    raise ValueError('Expected a non-empty list of replay cases')
 node = os.environ.get('BSV_CONTAINER', 'cg-chronicle-node')
 runtime = os.environ.get('BSV_CONTAINER_RUNTIME', 'container')
 if runtime not in ('container', 'docker'):
@@ -44,6 +46,5 @@ for start in range(0, len(cases), 32):
             print(row['name'], 'MISMATCH', reply, flush=True)
     print(f'{len(results)}/{len(cases)} checked', flush=True)
 json.dump({'node_version': version,
-           'image': 'docker.io/bitcoinsv/bitcoin-sv@sha256:d96fe4786a00e5fc10bc9e0e76a6006376f9472d4eb74d07e4c1e0d019493d33',
            'runtime': runtime, 'cases': results}, open(sys.argv[2], 'w'), indent=2)
 sys.exit(0 if all(r['matches'] for r in results) else 1)
