@@ -233,7 +233,10 @@ impl Checker for ZVersionChecker {
 
         let sig_hash = self.z;
         let der_sig = &sig[0..sig.len() - 1];
-        let signature = Signature::from_der(der_sig)?;
+        let mut signature = Signature::from_der(der_sig)?;
+        if self.tx_version > 1 {
+            signature = signature.normalize_s();
+        }
 
         let message = sig_hash.0;
 
