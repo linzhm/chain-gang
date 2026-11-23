@@ -51,3 +51,12 @@ BSV_CONTAINER_RUNTIME=docker BSV_CONTAINER=cg-chain-review-node python3 scripts/
 ```
 
 The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived tests intentionally omit flags instead.
+
+The activation-boundary matrix exports 180 additional requests covering spending
+heights before, at and after activation, valid execution on new outputs, and the
+expected node error for rejected scripts.
+
+```sh
+CHRONICLE_NOP_BOUNDARY_DIFF_OUTPUT=/tmp/nop-boundary.json cargo test --test script_vectors discourage_nops_flag_at_chronicle_activation_boundary
+python3 scripts/chronicle-node-diff.py /tmp/nop-boundary.json /tmp/nop-boundary-result.json
+```

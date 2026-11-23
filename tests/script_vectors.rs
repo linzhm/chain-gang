@@ -29,6 +29,7 @@
 
 use chain_gang::chronicle::ChronicleValidationContext;
 use chain_gang::messages::{OutPoint, Tx, TxIn, TxOut};
+use chain_gang::util::ChainGangError;
 use chain_gang::util::Hash256;
 use linked_hash_map::LinkedHashMap;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -691,6 +692,158 @@ fn discourage_nops_flag_uses_each_utxo_creation_height() {
         }
     }
     if let Some(path) = export {
+        let file = std::fs::File::create(path).unwrap();
+        serde_json::to_writer_pretty(file, &rows).unwrap();
+    }
+}
+
+#[test]
+fn raw_script_flags_do_not_bundle_nop_policy_with_other_rules() {
+    use chain_gang::script::{
+        Script, TransactionlessChecker, CONSENSUS_ONLY, DISCOURAGE_UPGRADABLE_NOPS,
+        EXPLICIT_UPGRADABLE_NOPS_POLICY, NO_FLAGS,
+    };
+
+    for other in [NO_FLAGS, CONSENSUS_ONLY] {
+        for explicit in [NO_FLAGS, EXPLICIT_UPGRADABLE_NOPS_POLICY] {
+            for discourage in [false, true] {
+                let flags = other
+                    | explicit
+                    | if discourage {
+                        DISCOURAGE_UPGRADABLE_NOPS
+                    } else {
+                        NO_FLAGS
+                    };
+                let result = Script(vec![0xb0, 0x51]).eval(&mut TransactionlessChecker {}, flags);
+                if discourage {
+                    assert!(
+                        matches!(result, Err(ChainGangError::ScriptError(ref message)) if message == "discouraged upgradeable NOP"),
+                        "flags={flags:#x}"
+                    );
+                } else {
+                    assert!(result.is_ok(), "flags={flags:#x}: {result:?}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn discourage_nops_flag_at_chronicle_activation_boundary() {
+    use serde_json::json;
+
+    const ACTIVATION: u64 = 200;
+    let export = std::env::var_os("CHRONICLE_NOP_BOUNDARY_DIFF_OUTPUT");
+    let mut rows = Vec::new();
+
+    for (opcode, operation, stack_error) in [
+        (
+            "SUBSTR",
+            "0x026162 1 1 SUBSTR 0x0162 EQUAL",
+            "Stack too small: 3",
+        ),
+        ("LEFT", "0x026162 1 LEFT 0x0161 EQUAL", "Stack too small: 2"),
+        (
+            "RIGHT",
+            "0x026162 1 RIGHT 0x0162 EQUAL",
+            "Stack too small: 2",
+        ),
+        (
+            "LSHIFTNUM",
+            "1 1 LSHIFTNUM 2 EQUAL",
+            "Cannot pop bigint, empty stack",
+        ),
+        (
+            "RSHIFTNUM",
+            "4 1 RSHIFTNUM 2 EQUAL",
+            "Cannot pop bigint, empty stack",
+        ),
+    ] {
+        for version in [1, 2] {
+            for (spent, created) in [
+                (199, 198),
+                (200, 199),
+                (200, 200),
+                (201, 199),
+                (201, 200),
+                (201, 201),
+            ] {
+                for flag in [false, true] {
+                    let mut verify = |lock: &str, node_error: Option<&str>| {
+                        let credit = crediting_tx(&parse_script(lock), 1000);
+                        let tx = spending_tx(&credit, &[], version);
+                        let outpoint = tx.inputs[0].prev_output.clone();
+                        let utxos = LinkedHashMap::from_iter([(
+                            outpoint.clone(),
+                            credit.outputs[0].clone(),
+                        )]);
+                        let heights = HashMap::from([(outpoint, created)]);
+                        let ctx =
+                            ChronicleValidationContext::new(spent, ACTIVATION, &heights, None);
+                        let result = tx.validate_with_chronicle_context_and_nop_policy(
+                            true,
+                            true,
+                            &utxos,
+                            &HashSet::new(),
+                            &ctx,
+                            true,
+                            flag,
+                        );
+                        if export.is_some() {
+                            let flags = (1 << 16)
+                                | (1 << 18)
+                                | (1 << 19)
+                                | (u32::from(spent >= ACTIVATION) << 20)
+                                | (u32::from(created >= ACTIVATION) << 21)
+                                | (u32::from(flag) << 7);
+                            rows.push(json!({
+                                "name": format!("{lock} version={version} spent={spent} created={created} flag={flag}"),
+                                "spending_height": spent,
+                                "library": result.is_ok(),
+                                "expected": node_error.is_none(),
+                                "expected_description": node_error,
+                                "request": {
+                                    "tx": tx.as_hexstr(), "n": 0, "flags": flags, "reportflags": true,
+                                    "txo": {"lock": hex::encode(&credit.outputs[0].lock_script.0), "value": 1000}
+                                }
+                            }));
+                        }
+                        result
+                    };
+                    let node_error = match (created >= ACTIVATION, flag) {
+                        (true, _) => Some("Operation not valid with the current stack size"),
+                        (false, true) => Some("NOPx reserved for soft-fork upgrades"),
+                        (false, false) => None,
+                    };
+                    let result = verify(&format!("{opcode} 1"), node_error);
+                    let expected_error = match (created >= ACTIVATION, flag) {
+                        (true, _) => Some(stack_error),
+                        (false, true) => Some("discouraged upgradeable NOP"),
+                        (false, false) => None,
+                    };
+                    assert!(
+                        match (&result, expected_error) {
+                            (Ok(()), None) => true,
+                            (Err(ChainGangError::ScriptError(actual)), Some(expected)) => {
+                                actual == expected
+                            }
+                            _ => false,
+                        },
+                        "{opcode}: version={version}, spent={spent}, created={created}, flag={flag}: expected {expected_error:?}, got {result:?}"
+                    );
+                    if created >= ACTIVATION {
+                        let result = verify(operation, None);
+                        assert!(
+                            result.is_ok(),
+                            "{operation}: version={version}, spent={spent}, created={created}, flag={flag}: {result:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+    if let Some(path) = export {
+        assert_eq!(rows.len(), 180);
         let file = std::fs::File::create(path).unwrap();
         serde_json::to_writer_pretty(file, &rows).unwrap();
     }

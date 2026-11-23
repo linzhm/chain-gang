@@ -8,6 +8,7 @@ Timeout, skipped, missing results and RPC errors are failures, never rejection.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -20,6 +21,8 @@ cli = [runtime, 'exec', '-i', node, 'bitcoin-cli', '-regtest',
        '-rpcuser=cgtest', '-rpcpassword=local-regtest-only', '-stdin']
 version = subprocess.check_output(
     [runtime, 'exec', node, 'bitcoind', '--version'], text=True).splitlines()[0]
+if not re.search(r'\bv?1\.2\.3(?:\.0)?(?=\s|$|[-+])', version):
+    raise RuntimeError(f'Expected BSV Node v1.2.3, got {version!r}')
 results = []
 for start in range(0, len(cases), 32):
     batch = cases[start:start + 32]
@@ -32,7 +35,9 @@ for start in range(0, len(cases), 32):
     for row, reply in zip(batch, replies):
         flags_match = ('flags' not in row['request'] or
                        reply.get('flags') == row['request']['flags'])
-        matches = (flags_match and reply['result'] in ('ok', 'error') and
+        description_matches = (row.get('expected_description') is None or
+                               reply.get('description') == row['expected_description'])
+        matches = (flags_match and description_matches and reply['result'] in ('ok', 'error') and
                    (reply['result'] == 'ok') == row['library'] == row['expected'])
         results.append({**row, 'node': reply, 'matches': matches})
         if not matches:
