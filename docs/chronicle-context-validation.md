@@ -50,7 +50,7 @@ CHRONICLE_NOP_DIFF_OUTPUT=/tmp/nop.json cargo test --test script_vectors discour
 BSV_CONTAINER_RUNTIME=docker BSV_CONTAINER=cg-chain-review-node python3 scripts/chronicle-node-diff.py /tmp/nop.json /tmp/nop-result.json
 ```
 
-The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived tests intentionally omit flags instead.
+The differential runners also require returned effective flags to equal explicitly requested flags. Explicit-flag application cases omit `txo.height`, which would otherwise override the UTXO-era flag on Node. Height-derived requests omit flags so Node selects the rules. The runner checks the returned chain-activation and UTXO-era bits against the two expectations saved alongside each request. Run `python3 -m unittest discover -s python/src/tests -p test_chronicle_replay.py` to check the archived replies and the missing-flag and flipped-bit cases without a node.
 
 The activation-boundary matrix exports 180 additional requests covering spending
 heights before, at and after activation, valid execution on new outputs, and the

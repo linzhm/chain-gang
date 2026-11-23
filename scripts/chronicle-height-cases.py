@@ -3,18 +3,22 @@
 Requires the isolated regtest node (activation=200) to have reached height >=200.
 """
 import json, os, subprocess, sys
+from pathlib import Path
 cli=['container','exec',os.environ.get('BSV_CONTAINER','cg-chronicle-context-v3'),
      'bitcoin-cli','-regtest','-rpcuser=cgtest','-rpcpassword=local-regtest-only']
 parents={h:subprocess.check_output(cli+['getblockhash',str(h)],text=True).strip() for h in (198,199)}
 rows=[]
-for row in json.load(open(sys.argv[1])):
+for row in json.loads(Path(sys.argv[1]).read_text()):
     # This group deliberately uses consensus NOP behavior. Node-derived RPC flags
     # include DISCOURAGE_UPGRADABLE_NOPS policy, which is a different comparison.
     if row['name'].startswith('nop-left'):
         continue
     request=row['request']
     flags=request.pop('flags')
-    request['prevblockhash']=parents[199 if flags & (1 << 20) else 198]
-    request['txo']['height']=200 if flags & (1 << 21) else 100
+    after_activation = bool(flags & (1 << 20))
+    new_output = bool(flags & (1 << 21))
+    request['prevblockhash'] = parents[199 if after_activation else 198]
+    request['txo']['height'] = 200 if new_output else 100
+    row['expected_era'] = {'chronicle': after_activation, 'utxo_after_chronicle': new_output}
     rows.append(row)
-json.dump(rows,open(sys.argv[2],'w'),indent=2)
+Path(sys.argv[2]).write_text(json.dumps(rows, indent=2))

@@ -11,8 +11,24 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
-cases = json.load(open(sys.argv[1]))
+def flags_match(row, reply):
+    request = row['request']
+    if 'flags' in request:
+        return reply.get('flags') == request['flags']
+    if 'expected_era' not in row:
+        if 'prevblockhash' in request:
+            raise ValueError('Missing expected_era. Regenerate height cases with chronicle-height-cases.py')
+        return True
+    flags = reply.get('flags')
+    return type(flags) is int and row['expected_era'] == {
+        'chronicle': bool(flags & (1 << 20)),
+        'utxo_after_chronicle': bool(flags & (1 << 21)),
+    }
+
+
+cases = json.loads(Path(sys.argv[1]).read_text())
 if not isinstance(cases, list) or not cases:
     raise ValueError('Expected a non-empty list of replay cases')
 node = os.environ.get('BSV_CONTAINER', 'cg-chronicle-node')
@@ -35,16 +51,15 @@ for start in range(0, len(cases), 32):
     if len(replies) != len(batch):
         raise RuntimeError('Node returned an incomplete batch')
     for row, reply in zip(batch, replies):
-        flags_match = ('flags' not in row['request'] or
-                       reply.get('flags') == row['request']['flags'])
         description_matches = (row.get('expected_description') is None or
                                reply.get('description') == row['expected_description'])
-        matches = (flags_match and description_matches and reply['result'] in ('ok', 'error') and
+        matches = (flags_match(row, reply) and description_matches and reply['result'] in ('ok', 'error') and
                    (reply['result'] == 'ok') == row['library'] == row['expected'])
         results.append({**row, 'node': reply, 'matches': matches})
         if not matches:
             print(row['name'], 'MISMATCH', reply, flush=True)
     print(f'{len(results)}/{len(cases)} checked', flush=True)
-json.dump({'node_version': version,
-           'runtime': runtime, 'cases': results}, open(sys.argv[2], 'w'), indent=2)
+Path(sys.argv[2]).write_text(json.dumps({
+    'node_version': version, 'runtime': runtime, 'cases': results,
+}, indent=2))
 sys.exit(0 if all(r['matches'] for r in results) else 1)
