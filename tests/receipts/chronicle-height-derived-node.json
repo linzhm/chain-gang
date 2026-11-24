@@ -1,7 +1,13 @@
 {
   "node_version": "Bitcoin SV version v1.2.3",
   "image": "docker.io/bitcoinsv/bitcoin-sv@sha256:d96fe4786a00e5fc10bc9e0e76a6006376f9472d4eb74d07e4c1e0d019493d33",
-  "runtime": "Apple Container",
+  "runtime": "container",
+  "recorded_on": "2026-11-24",
+  "regtest": {
+    "genesis_activation_height": 1,
+    "chronicle_activation_height": 200,
+    "tip_height": 201
+  },
   "cases": [
     {
       "expected": false,
@@ -16,11 +22,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 868395
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activefalse-newfalse-v1",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "010000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 868395
       },
       "matches": true
@@ -38,7 +73,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -60,11 +99,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 868395
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activefalse-newfalse-v2",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 868395
       },
       "matches": true
@@ -82,7 +150,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -104,11 +176,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 868395
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activefalse-newfalse-v4294967295",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "ffffffff0103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 868395
       },
       "matches": true
@@ -126,7 +227,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -148,11 +253,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 1916971
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activetrue-newfalse-v1",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "010000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 1916971
       },
       "matches": true
@@ -170,7 +304,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -192,11 +330,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 1916971
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activetrue-newfalse-v2",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 1916971
       },
       "matches": true
@@ -214,7 +381,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -236,11 +407,40 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
         "description": "Attempted to use a disabled opcode",
+        "flags": 1916971
+      },
+      "matches": true
+    },
+    {
+      "expected": true,
+      "library": true,
+      "name": "nop-left-activetrue-newfalse-v4294967295",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "ffffffff0103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 100
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
+      },
+      "node": {
+        "result": "ok",
         "flags": 1916971
       },
       "matches": true
@@ -258,7 +458,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -280,10 +484,40 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
+        "flags": 4014123
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "nop-left-activetrue-newtrue-v1",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "010000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 200
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
+      },
+      "node": {
+        "result": "error",
+        "description": "Operation not valid with the current stack size",
         "flags": 4014123
       },
       "matches": true
@@ -301,7 +535,11 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
@@ -322,10 +560,40 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
+        "flags": 4014123
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "nop-left-activetrue-newtrue-v2",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "020000000103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 200
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
+      },
+      "node": {
+        "result": "error",
+        "description": "Operation not valid with the current stack size",
         "flags": 4014123
       },
       "matches": true
@@ -343,7 +611,11 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
@@ -364,10 +636,40 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
+        "flags": 4014123
+      },
+      "matches": true
+    },
+    {
+      "expected": false,
+      "library": false,
+      "name": "nop-left-activetrue-newtrue-v4294967295",
+      "request": {
+        "n": 0,
+        "reportflags": true,
+        "tx": "ffffffff0103030303030303030303030303030303030303030303030303030303030303030000000000ffffffff010100000000000000015100000000",
+        "txo": {
+          "lock": "b451",
+          "value": 1,
+          "height": 200
+        },
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
+      },
+      "node": {
+        "result": "error",
+        "description": "Operation not valid with the current stack size",
         "flags": 4014123
       },
       "matches": true
@@ -385,7 +687,11 @@
           "value": 1,
           "height": 200
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": true
       },
       "node": {
         "result": "ok",
@@ -406,7 +712,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -428,7 +738,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -450,7 +764,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "ok",
@@ -471,7 +789,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -493,7 +815,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -515,7 +841,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -537,7 +867,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "ok",
@@ -558,7 +892,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "ok",
@@ -579,7 +917,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -601,7 +943,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "639db85297d4ad543b619941fd0e54334f4d54ee597c7a83ddbf0635a574cfda"
+        "prevblockhash": "65f883be6a4cac1a6cca5a7cff0f49439055a08f72181cf480b62122fb37413f"
+      },
+      "expected_era": {
+        "chronicle": false,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",
@@ -623,7 +969,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "ok",
@@ -644,7 +994,11 @@
           "value": 1,
           "height": 100
         },
-        "prevblockhash": "06c0fb30b6375ced4c5b5c546f134dc7f5c14dee35bcbd1333975a044a656988"
+        "prevblockhash": "175437359855a3a72d55bc3ed5af1bbb58cb3caebcaa017075fb0db95c5c40fc"
+      },
+      "expected_era": {
+        "chronicle": true,
+        "utxo_after_chronicle": false
       },
       "node": {
         "result": "error",

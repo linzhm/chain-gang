@@ -9,10 +9,8 @@ cli=['container','exec',os.environ.get('BSV_CONTAINER','cg-chronicle-context-v3'
 parents={h:subprocess.check_output(cli+['getblockhash',str(h)],text=True).strip() for h in (198,199)}
 rows=[]
 for row in json.loads(Path(sys.argv[1]).read_text()):
-    # This group deliberately uses consensus NOP behavior. Node-derived RPC flags
-    # include DISCOURAGE_UPGRADABLE_NOPS policy, which is a different comparison.
-    if row['name'].startswith('nop-left'):
-        continue
+    # With prevblockhash, verifyscript derives block flags, so old-output NOP
+    # cases remain applicable. Its policy resource limits do not add NOP policy.
     request=row['request']
     flags=request.pop('flags')
     after_activation = bool(flags & (1 << 20))

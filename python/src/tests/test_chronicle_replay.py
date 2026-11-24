@@ -28,13 +28,19 @@ class ChronicleReplayTest(unittest.TestCase):
             ):
                 runpy.run_path(str(SCRIPTS / 'chronicle-height-cases.py'))
             rows = json.loads(derived.read_text())
+            self.assertEqual(len(rows), 39)
+            self.assertEqual([r['name'] for r in rows], [r['name'] for r in explicit])
+            self.assertEqual(sum(r['name'].startswith('nop-left') for r in rows), 9)
+            self.assertTrue(all('flags' not in r['request'] for r in rows))
             self.assertEqual([r['name'] for r in rows], [r['name'] for r in recorded])
             self.assertEqual([r['request'] for r in rows], [r['request'] for r in recorded])
 
             def replay(replies):
                 with patch.object(sys, 'argv', ['', str(derived), str(result)]), patch(
                     'subprocess.check_output',
-                    side_effect=['Bitcoin SV version v1.2.3', json.dumps(replies)],
+                    side_effect=['Bitcoin SV version v1.2.3'] + [
+                        json.dumps(replies[i:i + 32]) for i in range(0, len(replies), 32)
+                    ],
                 ), contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as exit_:
                     runpy.run_path(str(SCRIPTS / 'chronicle-node-diff.py'))
                 return exit_.exception.code, [r['matches'] for r in json.loads(result.read_text())['cases']]
