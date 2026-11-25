@@ -24,16 +24,20 @@ Reference: bitcoin-sv commit
   bytes as a preimage would cause callers to hash the wrong value.
 - `Wallet::sign_tx_input` and its indexed variant reject these cases before
   changing the transaction. Their forwarding APIs inherit this policy.
-- `create_sighash` remains a digest helper. `generate_signature` and
-  `Wallet::sign_sighash` remain explicit low-level signing operations; callers
-  must enforce their own signing policy. A sentinel signature commits to no
-  transaction fields and can be reused wherever the same sentinel applies.
+- `create_sighash` remains a consensus digest helper. `generate_signature` and
+  `Wallet::sign_sighash` reject the exact raw sentinel with `BadArgument`,
+  regardless of the supplied sighash-type byte. This protects the documented
+  digest-then-sign pattern: a sentinel signature commits to no transaction
+  fields and can be reused wherever the same sentinel applies. This is a
+  signing safety policy, not a consensus rejection rule. Tests that need such
+  a signature construct it directly with k256 and a test-only key.
 - Ordinary OTDA digests, BIP-143 digests, and public function signatures are
   unchanged. No new error enum variant is introduced.
 
 `tests/otda_constant_digest.rs` exercises public digest/preimage APIs, algorithm
 and flag combinations, bounds, raw byte order, real signature consensus
-validation, wallet refusal without mutation, and invalidation once a paired
+validation, wallet refusal without mutation, both raw-digest signing APIs'
+refusal for every sighash-type byte, exact raw-byte matching, and invalidation once a paired
 output is added. These are source-derived boundary regressions, supplementing
 the existing vendored BSV node vectors. They are not a live-node differential
 execution test.

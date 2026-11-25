@@ -217,8 +217,13 @@ impl Wallet {
 
     /// Signs a precomputed sighash with this wallet's private key.
     ///
-    /// Low-level escape hatch: the caller is responsible for avoiding
-    /// transaction-independent OTDA sentinel digests.
+    /// Uses [`generate_signature`], including its refusal of the exact OTDA
+    /// `uint256(1)` sentinel (raw bytes `01` followed by 31 zero bytes), for
+    /// every `sighash_flags` value. That digest commits to no transaction fields.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainGangError::BadArgument`] for the reserved sentinel digest.
     pub fn sign_sighash(
         &self,
         sighash: Hash256,

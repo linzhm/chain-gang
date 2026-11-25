@@ -7,10 +7,13 @@ use chain_gang::{
     network::Network,
     script::{op_codes::*, Script},
     transaction::{generate_signature, sighash::*},
-    util::{sha256d, Hash256},
-    wallet::Wallet,
+    util::{sha256d, ChainGangError, Hash256},
+    wallet::{create_sighash, Wallet},
 };
-use k256::ecdsa::SigningKey;
+use k256::ecdsa::{
+    signature::hazmat::{PrehashSigner, PrehashVerifier},
+    Signature, SigningKey,
+};
 use linked_hash_map::LinkedHashMap;
 use std::collections::HashSet;
 
@@ -36,6 +39,67 @@ fn tx() -> Tx {
             lock_script: Script(vec![OP_1]),
         }],
         lock_time: 0,
+    }
+}
+
+#[test]
+fn digest_signing_refuses_the_exact_sentinel() {
+    // Test-only key. Exercise the documented digest-then-sign composition.
+    let key = SigningKey::from_slice(&[7; 32]).unwrap();
+    let wallet = Wallet::new(key.clone(), *key.verifying_key(), Network::BSV_Testnet);
+    let tx = tx();
+    let flags = SIGHASH_SINGLE | SIGHASH_FORKID | SIGHASH_CHRONICLE;
+    let digest = sighash(&tx, 1, &[OP_CHECKSIG], 10, flags, &mut SigHashCache::new()).unwrap();
+    assert_eq!(digest, one());
+    assert_eq!(
+        create_sighash(&tx, 1, &Script(vec![OP_CHECKSIG]), 10, flags).unwrap(),
+        digest
+    );
+    // A precomputed digest has no transaction context; changing its hash-type
+    // byte, including to a BIP143 type, must not bypass the refusal.
+    for flags in 0..=u8::MAX {
+        for result in [
+            generate_signature(&[7; 32], &digest, flags),
+            wallet.sign_sighash(digest, flags),
+        ] {
+            assert!(matches!(
+                result,
+                Err(ChainGangError::BadArgument(message)) if message.contains("OTDA constant digest")
+            ));
+        }
+    }
+}
+
+#[test]
+fn digest_signing_accepts_other_raw_byte_values() {
+    let key = SigningKey::from_slice(&[7; 32]).unwrap();
+    let wallet = Wallet::new(key.clone(), *key.verifying_key(), Network::BSV_Testnet);
+    let mut two = [0; 32];
+    two[0] = 2;
+    let mut reversed = [0; 32];
+    reversed[31] = 1;
+    let mut changed_tail = one().0;
+    changed_tail[31] = 1;
+    for raw in [[0; 32], two, reversed, changed_tail] {
+        let digest = Hash256(raw);
+        assert_ne!(digest, one());
+        for flags in [
+            SIGHASH_ALL | SIGHASH_FORKID,
+            SIGHASH_ALL | SIGHASH_FORKID | SIGHASH_CHRONICLE,
+        ] {
+            for sig in [
+                generate_signature(&[7; 32], &digest, flags).unwrap(),
+                wallet.sign_sighash(digest, flags).unwrap(),
+            ] {
+                assert_eq!(sig.last(), Some(&flags));
+                let signature = Signature::from_der(&sig[..sig.len() - 1])
+                    .unwrap()
+                    .normalize_s();
+                key.verifying_key()
+                    .verify_prehash(&raw, &signature)
+                    .unwrap();
+            }
+        }
     }
 }
 
@@ -203,10 +267,12 @@ fn consensus_accepts_constant_signature_but_wallet_refuses_to_create_it() {
                 .sign_tx_input_checksig_index(&funding, &mut spend, 1, flags, 0)
                 .is_err());
             assert_eq!(spend, before);
-            // Explicit low-level signing remains available. Sign the independently
-            // specified sentinel, not a digest computed by the implementation.
-            let sig = generate_signature(&[7; 32], &one(), flags).unwrap();
-            assert!(wallet.sign_sighash(one(), flags).is_ok());
+            // Test-only bypass of wallet policy: construct a signature over the
+            // independently specified sentinel with k256, so consensus acceptance
+            // remains covered even though the public signing APIs refuse it.
+            let signature: Signature = key.sign_prehash(&one().0).unwrap();
+            let mut sig = signature.normalize_s().to_der().as_bytes().to_vec();
+            sig.push(flags);
             spend.inputs[1].unlock_script.append_data(&sig);
             assert!(spend
                 .validate_consensus(false, true, &utxos, &HashSet::new())
