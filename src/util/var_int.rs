@@ -67,6 +67,46 @@ mod tests {
         write_read_value(u64::MAX);
     }
 
+    #[test]
+    fn encoding_and_reader_boundary_matrix() {
+        let cases: &[(u64, &[u8])] = &[
+            (0, &[0]),
+            (1, &[1]),
+            (251, &[251]),
+            (252, &[252]),
+            (253, &[0xfd, 0xfd, 0]),
+            (254, &[0xfd, 0xfe, 0]),
+            (65_534, &[0xfd, 0xfe, 0xff]),
+            (65_535, &[0xfd, 0xff, 0xff]),
+            (65_536, &[0xfe, 0, 0, 1, 0]),
+            (4_294_967_295, &[0xfe, 0xff, 0xff, 0xff, 0xff]),
+            (4_294_967_296, &[0xff, 0, 0, 0, 0, 1, 0, 0, 0]),
+            (0x0102_0304_0506_0708, &[0xff, 8, 7, 6, 5, 4, 3, 2, 1]),
+            (u64::MAX, &[0xff; 9]),
+        ];
+        for &(value, expected) in cases {
+            let mut encoded = Vec::new();
+            super::write(value, &mut encoded).unwrap();
+            assert_eq!(encoded, expected, "encoding {value}");
+            assert_eq!(super::size(value), expected.len(), "size of {value}");
+
+            for suffix in [&[][..], &[0xfd][..], &[0, 0xff, 0x80][..]] {
+                let bytes = [expected, suffix].concat();
+                let mut reader = bytes.as_slice();
+                assert_eq!(super::read(&mut reader).unwrap(), value);
+                assert_eq!(reader, suffix, "bytes left after reading {value}");
+            }
+            for end in 0..expected.len() {
+                let error = super::read(&mut &expected[..end]).unwrap_err();
+                assert_eq!(
+                    error.kind(),
+                    std::io::ErrorKind::UnexpectedEof,
+                    "{value} at {end}"
+                );
+            }
+        }
+    }
+
     fn write_read_value(n: u64) {
         let mut v = Vec::new();
         super::write(n, &mut v).unwrap();
